@@ -56,6 +56,10 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; color: var(--dim); text-trans
 .fill { height: 100%; width: 0; background: var(--accent); transition: width .25s linear; }
 
 .controls { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+.controls.secondary { margin-top: 10px; align-items: center; }
+.controls.secondary .hint { font-size: 12px; color: #6f7688; }
+.session { margin-left: auto; font-size: 12px; color: var(--dim); }
+button.active { background: var(--accent); border-color: var(--accent); color: #0e0f13; font-weight: 600; }
 button {
   font: inherit; color: var(--text); background: var(--panel-2);
   border: 1px solid var(--line); border-radius: 9px; padding: 8px 16px; cursor: pointer;
@@ -123,6 +127,9 @@ button.ghost { background: transparent; font-size: 13px; padding: 5px 12px; }
 .track .ta { color: var(--dim); font-size: 12px; }
 .track .td { color: #616879; font-size: 11px; font-variant-numeric: tabular-nums; }
 .track.failed .tn { color: var(--bad); text-decoration: line-through; }
+.track.liked .tn::before { content: '♥ '; color: var(--accent); }
+.track.disliked .tn::before { content: '✕ '; color: #7b8296; }
+.track.disliked .tn { color: #7b8296; }
 .track.bad-id { color: var(--warn); }
 
 .hint { color: var(--dim); font-size: 13px; }

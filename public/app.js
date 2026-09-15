@@ -18,6 +18,11 @@ const el = {
   playlists: document.getElementById('playlists'),
   tracks: document.getElementById('tracks'),
   reload: document.getElementById('reload'),
+  stop: document.getElementById('stop'),
+  like: document.getElementById('like'),
+  dislike: document.getElementById('dislike'),
+  unlike: document.getElementById('unlike'),
+  session: document.getElementById('session'),
   brief: document.getElementById('brief'),
   plan: document.getElementById('plan'),
   clearPlan: document.getElementById('clearPlan'),
@@ -43,6 +48,10 @@ const state = {
   resolving: false,
   codexPicks: [],
   attempts: 0, // 解析尝试总次数，用于验证没有快速重试
+  sessionId: null,
+  adjustments: {},
+  playId: null,
+  feedback: new Map(), // trackId -> 'like' | 'dislike'
 }
 
 // 播放意图的代次号：每一次新的播放/暂停/切歌意图都自增，
@@ -81,6 +90,11 @@ window.__radio = {
       queueIds: state.queue.map((t) => t.id),
       codexStatus: el.codexStatus.textContent,
       codexStatusClass: el.codexStatus.className,
+      sessionId: state.sessionId,
+      adjustments: state.adjustments,
+      playId: state.playId,
+      feedback: Object.fromEntries(state.feedback),
+      playButtonLabel: el.play.textContent,
     }
   },
 }
@@ -197,15 +211,20 @@ function markCurrent() {
     row.classList.toggle('current', state.current && id === state.current.id)
     row.classList.toggle('failed', state.failedIds.has(id))
     row.classList.toggle('codex', state.codexPicks.some((p) => p.id === id))
+    row.classList.toggle('liked', state.feedback.get(id) === 'like')
+    row.classList.toggle('disliked', state.feedback.get(id) === 'dislike')
   })
+  updateFeedbackButtons()
 }
 
 function updateControls() {
   const has = state.queue.length > 0
   el.play.disabled = !has
   el.next.disabled = !has
+  el.stop.disabled = !state.sessionId
   // 解析中也要显示“暂停”，否则用户没有入口取消正在进行的加载
-  el.play.textContent = state.resolving || (state.started && !audio.paused) ? '暂停' : '播放'
+  if (state.resolving || (state.started && !audio.paused)) el.play.textContent = '暂停'
+  else el.play.textContent = state.sessionId ? '继续' : '开播'
 }
 
 /* ---------- 播放核心 ---------- */
@@ -295,6 +314,7 @@ function handleTrackFailure(track, reason, index) {
   // 切歌时旧音频还在响；解析失败必须停掉它，否则会出现“界面报失败但旧歌还在放”。
   audio.pause()
   state.resolving = false
+  closePlay('failed')
   state.failedIds.add(track.id)
   state.failureCount += 1
   state.lastError = { id: track.id, name: track.name, reason }
@@ -333,6 +353,7 @@ function next({ userGesture = false } = {}) {
   }
   state.consecutiveFailures = 0
   state.stopped = false
+  closePlay('skipped')
   playIndex(nextIndex, { userGesture })
 }
 
@@ -344,6 +365,7 @@ audio.addEventListener('playing', () => {
   state.stopped = false
   setStatus(`播放中：${state.current.name} — ${state.current.artists}`, 'playing')
   updateControls()
+  notePlayStart()
 })
 
 audio.addEventListener('ended', () => {
@@ -355,6 +377,7 @@ audio.addEventListener('ended', () => {
     duration: audio.duration,
   }
   window.__radio.events = (window.__radio.events || []).concat([ev])
+  closePlay('ended')
   setStatus('播放结束，自动下一首。', 'ok')
   next()
 })
@@ -455,6 +478,7 @@ el.play.onclick = async () => {
   }
   state.stopped = false
   state.consecutiveFailures = 0
+  await ensureSession()
   playIndex(state.index >= 0 ? state.index : 0, { userGesture: true })
 }
 
@@ -541,5 +565,167 @@ el.clearPlan.onclick = () => {
   markCurrent()
 }
 
+/* ---------- 收听会话、播放记录与喜好反馈 ---------- */
+
+/** 开播前建立会话；已有会话则直接复用（刷新页面不会新建会话）。 */
+async function ensureSession() {
+  if (state.sessionId) return state.sessionId
+  try {
+    const res = await fetch('/api/session/start', { method: 'POST' })
+    const data = await res.json()
+    if (data.ok) {
+      state.sessionId = data.session.id
+      state.adjustments = data.session.adjustments || {}
+      renderSession()
+      updateControls()
+    }
+  } catch (_) {}
+  return state.sessionId
+}
+
+async function stopSession() {
+  playToken += 1
+  userWantsPlayback = false
+  state.resolving = false
+  if (!audio.paused) audio.pause()
+  await closePlay('stopped')
+  try {
+    await fetch('/api/session/stop', { method: 'POST' })
+  } catch (_) {}
+  state.sessionId = null
+  state.adjustments = {}
+  setStatus('已停止收听。下次开播会建立新的收听会话。')
+  renderSession()
+  updateControls()
+}
+
+async function closePlay(outcome) {
+  if (!state.playId) return
+  const playId = state.playId
+  state.playId = null
+  try {
+    await fetch('/api/plays/end', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ playId, outcome }),
+    })
+  } catch (_) {}
+}
+
+async function notePlayStart() {
+  if (state.playId || !state.current) return
+  try {
+    const res = await fetch('/api/plays/start', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        trackId: state.current.id,
+        trackName: state.current.name,
+        artists: state.current.artists,
+      }),
+    })
+    const data = await res.json()
+    if (data.ok) {
+      state.playId = data.playId
+      state.sessionId = data.session.id
+      renderSession()
+      updateControls()
+    }
+  } catch (_) {}
+}
+
+function renderSession() {
+  if (!state.sessionId) {
+    el.session.textContent = '未开播'
+    return
+  }
+  const adj = Object.entries(state.adjustments || {})
+  el.session.textContent =
+    `收听会话 ${state.sessionId}` +
+    (adj.length ? '｜本次调整：' + adj.map(([k, v]) => `${k}=${v}`).join('、') : '')
+}
+
+/** 刷新页面时只重新连上服务端已有的会话，不建立新会话、不自动出声。 */
+async function reattachSession() {
+  try {
+    const res = await fetch('/api/session')
+    const data = await res.json()
+    if (data.ok && data.session) {
+      state.sessionId = data.session.id
+      state.adjustments = data.session.adjustments || {}
+      setStatus('已连上正在进行的收听会话，点“继续”接着听。')
+    }
+  } catch (_) {}
+  renderSession()
+  updateControls()
+}
+
+async function loadFeedback() {
+  try {
+    const res = await fetch('/api/feedback')
+    const data = await res.json()
+    if (data.ok) {
+      state.feedback = new Map(data.active.map((f) => [Number(f.track_id), f.sentiment]))
+      markCurrent()
+    }
+  } catch (_) {}
+}
+
+function updateFeedbackButtons() {
+  const id = state.current ? state.current.id : null
+  const sentiment = id ? state.feedback.get(id) : null
+  el.like.classList.toggle('active', sentiment === 'like')
+  el.dislike.classList.toggle('active', sentiment === 'dislike')
+  el.unlike.disabled = !sentiment
+}
+
+async function saveFeedback(sentiment) {
+  if (!state.current) return
+  const t = state.current
+  try {
+    const res = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        trackId: t.id,
+        trackName: t.name,
+        artists: t.artists,
+        sentiment,
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok || !data.ok) throw new Error(data.message || `HTTP ${res.status}`)
+    state.feedback.set(t.id, sentiment)
+    markCurrent()
+    setStatus(
+      sentiment === 'like' ? `已记住：喜欢「${t.name}」` : `已记住：不喜欢「${t.name}」`,
+      'ok',
+    )
+  } catch (err) {
+    setStatus('反馈保存失败：' + err.message, 'bad')
+  }
+}
+
+el.like.onclick = () => saveFeedback('like')
+el.dislike.onclick = () => saveFeedback('dislike')
+el.unlike.onclick = async () => {
+  if (!state.current) return
+  const t = state.current
+  try {
+    const res = await fetch('/api/feedback/' + t.id, { method: 'DELETE' })
+    const data = await res.json()
+    if (data.ok) {
+      state.feedback.delete(t.id)
+      markCurrent()
+      setStatus(`已撤销对「${t.name}」的反馈`, 'ok')
+    }
+  } catch (err) {
+    setStatus('撤销反馈失败：' + err.message, 'bad')
+  }
+}
+el.stop.onclick = stopSession
+
 loadLibrary()
+loadFeedback()
+reattachSession()
 updateControls()

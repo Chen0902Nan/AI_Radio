@@ -99,14 +99,16 @@
 ```
 server/netease.js      接入层：扫码登录、资料读取、音源解析与分类、地址缓存
 server/codex.js        Codex 选歌适配层：codex exec 子进程、结构化输出、结果校验、超时处理
-server/index.js        HTTP 服务：静态页 + JSON API + /api/audio/:id 音频转发（含 Range）+ /api/plan
-public/                最小播放器：歌曲信息、播放/暂停、下一首、状态提示、红心与歌单列表、Codex 选歌
+server/db.js           本地持久化（Node 内置 node:sqlite）：设置、反馈、会话、播放记录
+server/index.js        HTTP 服务：静态页 + JSON API + /api/audio/:id 音频转发（含 Range）+ /api/plan + 会话/反馈 API
+public/                最小播放器：开播/继续/停止、下一首、状态提示、Codex 选歌、喜欢/不喜欢
 scripts/read-library.mjs     资料读取与分页/去重检查（输出不含凭据的报告，失败时非零退出）
 scripts/lib/library-checks.mjs  资料报告的判定逻辑（单独抽出以便测试）
 scripts/verify-playback.mjs  真实浏览器播放与故障恢复验证
-scripts/verify-fixes.mjs     针对代码审查缺陷的回归验证（含敏感性验证）
+scripts/verify-fixes.mjs     播放控制/缓存/退出码的回归验证（含敏感性验证）
 scripts/verify-codex.mjs     Codex 选歌验证（真实调用、结果校验、失败续播）
-data/                  登录会话与临时文件（已 gitignore，权限 0600）
+scripts/verify-session.mjs   收听会话 / 播放记录 / 喜好反馈验证
+data/                  登录会话与 SQLite 数据库（已 gitignore，权限 0600）
 ```
 
 ```bash
@@ -118,6 +120,7 @@ npm run start:test              # RADIO_TEST_HOOKS=1 node server/index.js
 npm run verify:playback         # 真实浏览器播放验证（约 5~6 分钟）
 npm run verify:fixes            # 播放控制/缓存/退出码回归（约 2 分钟）
 npm run verify:codex            # Codex 选歌验证（约 3 分钟，含一次真实 Codex 调用）
+npm run verify:session          # 收听会话/反馈验证（约 3 分钟）
 ```
 
 登录：浏览器打开 `http://127.0.0.1:8787/login`，用手机网易云音乐 App 扫码。二维码只在本机使用。
@@ -264,3 +267,64 @@ npm run verify:codex            # Codex 选歌验证（约 3 分钟，含一次�
 - 真实超时/额度不足未从真实 Codex 侧触发（会消耗订阅额度或需要等真实限流），用的是可控注入；真实的 codex 失败分类（退出码与 stderr 文本）只做了代码实现，未用真实失败样本验证。
 - 选歌质量没有量化评估，只有单次样本的目视合理性。
 - 每次约 2 万 token，未做长时高频调用的额度影响评估。
+
+（注：反馈权重与避免短时重复已在第 9 节落地并验证。）
+
+---
+
+## 9. 收听会话、播放记录与喜好反馈
+
+证据文件：`.scratch/radio-agent/verification/artifacts/session-feedback.json`（25 项检查全通过）
+
+这一节对应规格「拟采用的默认行为」里的第 1、4、5、10 条，也是 Q23 确认后第一块不依赖任何新凭据的实施。
+
+### 本地存储
+
+用 **Node 24 内置的 `node:sqlite`**，没有引入原生依赖或第三方包。四张表：
+
+| 表 | 用途 | 关键约束 |
+| --- | --- | --- |
+| `settings` | 可调设置 | 候选数量、选取数量、喜欢/不喜欢权重、避免重复窗口 |
+| `feedback` | 显式喜好反馈 | 部分唯一索引保证同一首歌只有一条生效；撤销是标记 `revoked_at`，不删历史 |
+| `sessions` | 收听会话 | 含开始/结束时间、结束原因、本次临时调整 |
+| `plays` | 播放记录 | 挂在会话上，带 `ended_at` 与 `outcome` |
+
+### 收听会话
+
+- 会话由**服务端**持有，网页只是客户端。点击开播时建立；已存在则复用（`reused: true`）。
+- **页面刷新只重连同一会话**，不新建会话、不自动出声，按钮从“开播”变成“继续”。实测刷新前后 `sessionId` 一致，且服务端仍只有一个未结束会话。
+- 停止会结束会话并清空本次临时调整；再次开播一定是新会话（实测新 id、`adjustments` 为空）。
+- 服务重启时把上一条没结束的会话补写结束时间与原因 `server_restart`，**不删数据**，避免网页刷新“复活”一个早就不在播的会话。
+
+### 喜好反馈
+
+- 喜欢 / 不喜欢 / 撤销三个操作，同一首歌改主意时会先撤销旧反馈再写入新的，同一时刻只有一条生效。
+- 撤销是标记而非删除，历史可回溯。
+- 非法反馈类型返回 400 且不写库。
+
+### 反馈真的影响选歌
+
+反馈不是只存起来：候选抽样改成**带权不放回抽样**，权重全部来自设置项。
+
+| 场景 | 250 轮 × 每轮 20 首的命中次数 |
+| --- | --- |
+| 无反馈（基线） | 15 |
+| 标记“不喜欢”（权重 0.0001） | 0 |
+| 标记“喜欢”（权重 4） | 45 |
+
+两点值得说明：一是“不喜欢”是**降低权重而不是封禁**，把权重压到 0.0001 仍保留被抽中的可能；二是这是用真实抽样函数跑的真实统计，不是断言内部实现。另外“避免短时间重复”也接在同一处：45 分钟内播过的曲在抽样中降权到 0.2。
+
+### 播放记录
+
+开始播放时写一条带会话的 `plays`，结束/跳过/失败/停止时回填 `outcome`。这同时是后续“避免重复”和两小时连续收听证据的基础。
+
+### 这一节的限制
+
+- **明确点歌优先**仍未实现（没有聊天入口）。
+- 会话的临时调整只有存取接口，还没有从聊天或界面产生的入口。
+- 播放记录的 `outcome` 目前只覆盖到 stopped/skipped/failed/ended 四种，未做统计报表。
+- 抽查的反馈权重结论是统计性的，用 250 轮样本控制抖动；换账号或换曲库规模后数值会变，但机制不变。
+
+### 回归
+
+改完这一块后重跑了全部验证：`verify:playback` 14/14、`verify:fixes` 18/18、`verify:codex` 13/13、`read-library` 退出码 0、`verify:session` 25/25。

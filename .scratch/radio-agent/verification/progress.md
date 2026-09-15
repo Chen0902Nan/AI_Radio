@@ -102,6 +102,19 @@
 
 详见 [report.md 第 8 节](report.md)。
 
+## 收听会话与喜好反馈（2026-09-15）
+
+Q23 确认后第一块不依赖新凭据的实施，对应默认行为第 1、4、5、10 条：
+
+- 本地存储用 Node 内置 `node:sqlite`，settings / feedback / sessions / plays 四张表。
+- 会话由服务端持有：刷新只重连不新建、不自动出声；停止后重开为新会话并清空临时调整；服务重启补写旧会话结束时间。
+- 反馈可替换、可撤销（标记不删除）、同一时刻只有一条生效。
+- 反馈真影响选歌：带权不放回抽样，250 轮实测中性命中 15、不喜欢 0、喜欢 45；同时 45 分钟内播过的曲降权。
+
+回归：`verify:playback` 14/14、`verify:fixes` 18/18、`verify:codex` 13/13、`read-library` 退出码 0、`verify:session` 25/25。
+
+详见 [report.md 第 9 节](report.md)。
+
 ## 记录
 
 - 详见 [../../integration-research.md](../integration-research.md) 的既有只读核查。

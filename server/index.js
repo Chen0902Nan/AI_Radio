@@ -10,6 +10,7 @@ const path = require('path')
 const { URL } = require('url')
 const ncm = require('./netease')
 const codex = require('./codex')
+const db = require('./db')
 
 const PORT = Number(process.env.PORT || 8787)
 const HOST = process.env.HOST || '127.0.0.1'
@@ -21,6 +22,15 @@ let injectResolveFailures = 0
 // 故障注入开关：让接下来的 N 次 /api/audio 请求返回 502，
 // 用于验证“播放中途音源失效 → 刷新地址”这条链路。
 let injectAudioFailures = 0
+
+db.init()
+// 服务重启后，上一条开着但已无心跳的会话不再算进行中；网页刷新只会连上当前会话
+try {
+  const closed = db.closeStaleSessions('server_restart')
+  if (closed.closed) console.log(`[radio] 已收尾上次未结束的会话 ${closed.id}`)
+} catch (err) {
+  console.error('[radio] 收尾旧会话失败：', err.message)
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -163,14 +173,44 @@ async function getLikedTracksCached(session) {
   return tracks
 }
 
-/** 从真实红心歌曲里随机抽一批做候选，避免把 456 首全部塞进提示词。 */
+/** 从真实红心歌曲里抽样做候选：
+ *  - 显式反馈加权：喜欢提高权重，不喜欢降低权重（不封禁）
+ *  - 最近播过的歌降权，避免短时间重复
+ *  用带权不放回抽样，参数都不是硬编码。
+ */
 function sampleCandidates(tracks, n) {
-  const pool = tracks.slice()
-  for (let i = pool.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[pool[i], pool[j]] = [pool[j], pool[i]]
+  const feedback = db.activeFeedbackMap()
+  const likeBoost = db.getNumberSetting('feedbackLikeBoost', 2)
+  const dislikePenalty = db.getNumberSetting('feedbackDislikePenalty', 0.1)
+  const avoidWindowMs = db.getNumberSetting('avoidRepeatWindowMin', 45) * 60 * 1000
+  const recent = avoidWindowMs > 0 ? new Set(db.recentlyPlayedIds(avoidWindowMs)) : new Set()
+
+  const pool = tracks.map((t) => {
+    let weight = 1
+    const sentiment = feedback.get(Number(t.id))
+    if (sentiment === 'like') weight *= likeBoost
+    if (sentiment === 'dislike') weight *= dislikePenalty
+    if (recent.has(Number(t.id))) weight *= 0.2
+    return { track: t, weight: Math.max(weight, 0.001) }
+  })
+
+  const want = Math.max(1, Math.min(n, pool.length))
+  const picked = []
+  for (let i = 0; i < want && pool.length; i += 1) {
+    const total = pool.reduce((a, x) => a + x.weight, 0)
+    let r = Math.random() * total
+    let idx = 0
+    for (let j = 0; j < pool.length; j += 1) {
+      r -= pool[j].weight
+      if (r <= 0) {
+        idx = j
+        break
+      }
+    }
+    picked.push(pool[idx].track)
+    pool.splice(idx, 1)
   }
-  return pool.slice(0, Math.max(1, Math.min(n, pool.length)))
+  return picked
 }
 
 /* ---------- 路由 ---------- */
@@ -295,11 +335,14 @@ const server = http.createServer(async (req, res) => {
       if (!session) return sendJson(res, 401, { ok: false, code: 'NOT_LOGGED_IN', message: '未登录' })
 
       const library = await getLikedTracksCached(session)
-      const candidates = sampleCandidates(library, Number(body.candidateCount) || 60)
+      const candidates = sampleCandidates(
+        library,
+        Number(body.candidateCount) || db.getNumberSetting('candidateCount', 60),
+      )
       const result = await codex.pickTracks({
         candidates,
         brief: typeof body.brief === 'string' ? body.brief.slice(0, 200) : '',
-        count: Number(body.count) || 5,
+        count: Number(body.count) || db.getNumberSetting('pickCount', 5),
         timeoutMs: Number(body.timeoutMs) || undefined,
       })
 
@@ -349,10 +392,113 @@ const server = http.createServer(async (req, res) => {
       })
     }
 
+    if (p === '/api/_test/sample-candidates' && TEST_HOOKS) {
+      // 只跑真实抽样函数，不调 Codex；用于验证反馈加权与重复降权
+      const session = ncm.loadSession()
+      if (!session) return sendJson(res, 401, { ok: false, code: 'NOT_LOGGED_IN' })
+      const library = await getLikedTracksCached(session)
+      const n = Number(url.searchParams.get('n')) || 20
+      const picked = sampleCandidates(library, n)
+      return sendJson(res, 200, { ok: true, ids: picked.map((t) => t.id), librarySize: library.length })
+    }
+
     if (p === '/api/_test/codex-mode' && TEST_HOOKS) {
       const body = await readBody(req)
       const mode = codex.setCodexMode(body.mode)
       return sendJson(res, 200, { ok: true, mode })
+    }
+
+    if (p === '/api/session' && req.method === 'GET') {
+      return sendJson(res, 200, {
+        ok: true,
+        session: db.getOpenSession(),
+        feedback: db.feedbackSummary(),
+      })
+    }
+
+    if (p === '/api/session/start' && req.method === 'POST') {
+      // 已开启的会话直接复用：网页刷新只是重新连上，不会新建会话或重复播放任务
+      return sendJson(res, 200, { ok: true, session: db.startSession() })
+    }
+
+    if (p === '/api/session/stop' && req.method === 'POST') {
+      const ended = db.endSession('stopped')
+      return sendJson(res, 200, { ok: true, ...ended })
+    }
+
+    if (p === '/api/session/adjustment' && req.method === 'POST') {
+      const body = await readBody(req)
+      const session = db.getOpenSession()
+      if (!session) return sendJson(res, 409, { ok: false, code: 'NO_SESSION', message: '当前没有进行中的收听会话' })
+      if (!body.key) return sendJson(res, 400, { ok: false, message: '缺少 key' })
+      const adjustments = db.setAdjustment(session.id, String(body.key), body.value)
+      return sendJson(res, 200, { ok: true, adjustments })
+    }
+
+    if (p === '/api/feedback' && req.method === 'GET') {
+      return sendJson(res, 200, {
+        ok: true,
+        active: db.listFeedback(),
+        summary: db.feedbackSummary(),
+      })
+    }
+
+    if (p === '/api/feedback' && req.method === 'POST') {
+      const body = await readBody(req)
+      const trackId = Number(body.trackId)
+      if (!Number.isFinite(trackId)) return sendJson(res, 400, { ok: false, message: '缺少 trackId' })
+      try {
+        const session = db.getOpenSession()
+        const row = db.addFeedback({
+          trackId,
+          trackName: body.trackName,
+          artists: body.artists,
+          sentiment: body.sentiment,
+          source: body.source || 'ui',
+          sessionId: session ? session.id : null,
+        })
+        return sendJson(res, 200, { ok: true, feedback: row, summary: db.feedbackSummary() })
+      } catch (err) {
+        return sendJson(res, 400, { ok: false, message: err.message })
+      }
+    }
+
+    if (p.startsWith('/api/feedback/') && req.method === 'DELETE') {
+      const trackId = Number(p.split('/').pop())
+      const r = db.revokeFeedback(trackId)
+      return sendJson(res, 200, { ok: true, ...r, summary: db.feedbackSummary() })
+    }
+
+    if (p === '/api/settings' && req.method === 'GET') {
+      return sendJson(res, 200, { ok: true, settings: db.listSettings() })
+    }
+
+    if (p === '/api/settings' && req.method === 'POST') {
+      const body = await readBody(req)
+      if (!body.key) return sendJson(res, 400, { ok: false, message: '缺少 key' })
+      const saved = db.setSetting(String(body.key), body.value)
+      return sendJson(res, 200, { ok: true, setting: saved, settings: db.listSettings() })
+    }
+
+    if (p === '/api/plays/start' && req.method === 'POST') {
+      const body = await readBody(req)
+      const trackId = Number(body.trackId)
+      if (!Number.isFinite(trackId)) return sendJson(res, 400, { ok: false, message: '缺少 trackId' })
+      // 没有会话时按规格自动建立，避免播放记录脱离会话
+      const session = db.getOpenSession() || db.startSession()
+      const playId = db.recordPlay({
+        sessionId: session.id,
+        trackId,
+        trackName: body.trackName,
+        artists: body.artists,
+      })
+      return sendJson(res, 200, { ok: true, playId, session })
+    }
+
+    if (p === '/api/plays/end' && req.method === 'POST') {
+      const body = await readBody(req)
+      db.finishPlay(Number(body.playId), String(body.outcome || 'unknown'))
+      return sendJson(res, 200, { ok: true })
     }
 
     if (p === '/api/logout') {

@@ -1,16 +1,16 @@
 {
-  "at": "2026-09-15T07:33:47.913Z",
+  "at": "2026-09-15T09:02:34.204Z",
   "base": "http://127.0.0.1:8787",
   "checks": [
     {
       "name": "真实 Codex 调用返回可用结果",
       "ok": true,
       "detail": {
-        "picks": 4,
-        "durationMs": 13099,
+        "picks": 3,
+        "durationMs": 10046,
         "exitCode": 0,
-        "tokens": 22711,
-        "wallMs": 15715
+        "tokens": 22695,
+        "wallMs": 12637
       }
     },
     {
@@ -18,10 +18,9 @@
       "ok": true,
       "detail": {
         "ids": [
-          541687281,
-          450048216,
-          441491828,
-          299946
+          209397,
+          493283125,
+          326722
         ],
         "candidates": 60
       }
@@ -31,10 +30,9 @@
       "ok": true,
       "detail": {
         "reasons": [
-          "温柔舒缓的日常絮语，让深夜的心绪慢慢安定。",
-          "清淡的民谣带着回忆感，适合独处时静静回想。",
-          "朦胧的空间感与孤独心绪相映，适合夜深沉浸。",
-          "细腻克制的声音留出余韵，适合为独处的夜晚收尾。"
+          "轻声吟唱细腻心事，适合独处时静静回味。",
+          "月光般的惆怅与柔和歌声，陪伴夜里的思念。",
+          "质朴温暖的旋律收拢思绪，为独处的夜晚轻轻收尾。"
         ]
       }
     },
@@ -45,10 +43,22 @@
         "kinds": [
           "full",
           "full",
-          "full",
           "full"
         ],
-        "dropped": []
+        "dropped": [
+          {
+            "id": 27867140,
+            "name": "房间",
+            "artists": "刘瑞琦",
+            "album": "房间",
+            "durationMs": 265000,
+            "fee": 0,
+            "mvId": 0,
+            "reason": "温柔旋律像回到自己的房间，让深夜慢慢安静下来。",
+            "kind": "none",
+            "playable": false
+          }
+        ]
       }
     },
     {
@@ -65,8 +75,8 @@
       "detail": {
         "status": 200,
         "kept": [
-          31426608,
-          255667
+          326698,
+          28838055
         ],
         "rejected": [
           {
@@ -97,10 +107,10 @@
         "picks": 5,
         "queueIds": [
           65536,
-          326719,
-          299936,
-          65979,
-          28561288,
+          299642,
+          27937466,
+          546722350,
+          1974443814,
           326722
         ]
       }
@@ -111,29 +121,29 @@
       "detail": {
         "picks": [
           {
-            "id": 326719,
-            "name": "喜欢",
-            "reason": "轻柔而亲密，适合让一天的喧闹慢慢退去。"
+            "id": 299642,
+            "name": "当时的月亮",
+            "reason": "空灵的歌声轻轻铺开，适合让夜晚慢下来。"
           },
           {
-            "id": 299936,
-            "name": "红豆",
-            "reason": "细腻悠缓，让独处时的思念有处安放。"
+            "id": 27937466,
+            "name": "忽然之间",
+            "reason": "温柔而克制，适合独自整理心里的思念。"
           },
           {
-            "id": 65979,
-            "name": "绵绵",
-            "reason": "低回的情绪适合夜深时独自回望往事。"
+            "id": 546722350,
+            "name": "十一种孤独",
+            "reason": "把孤独唱得细腻，陪你安静地与自己相处。"
           },
           {
-            "id": 28561288,
-            "name": "寻人启事",
-            "reason": "留白与倾诉感交织，适合安静听见自己的心事。"
+            "id": 1974443814,
+            "name": "我记得",
+            "reason": "随着舒缓的叙事回望记忆，让思绪慢慢漂远。"
           },
           {
             "id": 326722,
             "name": "儿歌",
-            "reason": "朴素温柔，给深夜的独处一个安心的收尾。"
+            "reason": "质朴温暖，适合在深夜收起心事，轻轻收尾。"
           }
         ]
       }
@@ -142,11 +152,11 @@
       "name": "Codex 选出的歌能在网页里真实播放",
       "ok": true,
       "detail": {
-        "id": 326719,
-        "title": "喜欢",
-        "currentTime": 2.35,
-        "duration": 279.93,
-        "reason": "轻柔而亲密，适合让一天的喧闹慢慢退去。"
+        "id": 299642,
+        "title": "当时的月亮",
+        "currentTime": 2.33,
+        "duration": 231.63,
+        "reason": "空灵的歌声轻轻铺开，适合让夜晚慢下来。"
       }
     },
     {
@@ -156,8 +166,8 @@
         "mode": "timeout",
         "queueUnchanged": true,
         "picksUnchanged": true,
-        "currentId": 326719,
-        "baselineCurrentId": 326719,
+        "currentId": 299642,
+        "baselineCurrentId": 299642,
         "paused": false,
         "advancedBy": 2.81,
         "status": "Codex 选歌失败（timeout）：（测试注入）Codex 超过 90000ms 未返回。继续使用原队列，播放不受影响。"
@@ -170,8 +180,8 @@
         "mode": "quota",
         "queueUnchanged": true,
         "picksUnchanged": true,
-        "currentId": 326719,
-        "baselineCurrentId": 326719,
+        "currentId": 299642,
+        "baselineCurrentId": 299642,
         "paused": false,
         "advancedBy": 2.82,
         "status": "Codex 选歌失败（quota）：（测试注入）Codex 订阅额度/速率受限。继续使用原队列，播放不受影响。"
@@ -184,8 +194,8 @@
         "mode": "invalid",
         "queueUnchanged": true,
         "picksUnchanged": true,
-        "currentId": 326719,
-        "baselineCurrentId": 326719,
+        "currentId": 299642,
+        "baselineCurrentId": 299642,
         "paused": false,
         "advancedBy": 2.82,
         "status": "Codex 选歌失败（invalid_output）：Codex 输出的 2 条全部不合法（id 不在候选集里 / 重复 / 缺理由）。继续使用原队列，播放不受影响。"
@@ -197,38 +207,31 @@
       "brief": "深夜安静、适合一个人听",
       "picks": [
         {
-          "id": 541687281,
-          "name": "慢慢喜欢你",
-          "artists": "莫文蔚",
-          "reason": "温柔舒缓的日常絮语，让深夜的心绪慢慢安定。",
+          "id": 209397,
+          "name": "太聪明",
+          "artists": "陈绮贞",
+          "reason": "轻声吟唱细腻心事，适合独处时静静回味。",
           "kind": "full"
         },
         {
-          "id": 450048216,
-          "name": "只道寻常",
-          "artists": "谢春花",
-          "reason": "清淡的民谣带着回忆感，适合独处时静静回想。",
+          "id": 493283125,
+          "name": "谁来剪月光",
+          "artists": "陈奕迅",
+          "reason": "月光般的惆怅与柔和歌声，陪伴夜里的思念。",
           "kind": "full"
         },
         {
-          "id": 441491828,
-          "name": "水星记",
-          "artists": "郭顶",
-          "reason": "朦胧的空间感与孤独心绪相映，适合夜深沉浸。",
-          "kind": "full"
-        },
-        {
-          "id": 299946,
-          "name": "偿还",
-          "artists": "王菲",
-          "reason": "细腻克制的声音留出余韵，适合为独处的夜晚收尾。",
+          "id": 326722,
+          "name": "儿歌",
+          "artists": "张悬",
+          "reason": "质朴温暖的旋律收拢思绪，为独处的夜晚轻轻收尾。",
           "kind": "full"
         }
       ],
       "meta": {
-        "durationMs": 13099,
+        "durationMs": 10046,
         "exitCode": 0,
-        "tokens": 22711,
+        "tokens": 22695,
         "candidates": 60
       },
       "rejected": []
@@ -291,23 +294,23 @@
       "status": 200,
       "kept": [
         {
-          "id": 31426608,
-          "name": "无条件",
-          "artists": "陈奕迅",
-          "album": "准备中",
-          "durationMs": 228973,
+          "id": 326698,
+          "name": "两者",
+          "artists": "张悬",
+          "album": "神的游戏",
+          "durationMs": 320000,
           "fee": 1,
-          "mvId": 395085,
+          "mvId": 28171,
           "reason": "（测试注入）真实候选",
           "kind": "full",
           "playable": true
         },
         {
-          "id": 255667,
-          "name": "胆小鬼",
-          "artists": "梁咏琪",
-          "album": "最爱梁咏琪",
-          "durationMs": 258160,
+          "id": 28838055,
+          "name": "再见悲哀",
+          "artists": "林忆莲",
+          "album": "我最喜爱的Eric Kwok作品展",
+          "durationMs": 220450,
           "fee": 8,
           "mvId": 0,
           "reason": "（测试注入）真实候选",
@@ -333,11 +336,11 @@
         "index": 0,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789457647371",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789462970699",
         "loadedId": 65536,
         "paused": false,
         "ended": false,
-        "currentTime": 2.026527,
+        "currentTime": 2.302935,
         "duration": 259.986667,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -810,7 +813,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 10,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "afterPlan": {
         "currentId": 65536,
@@ -818,11 +826,11 @@
         "index": 0,
         "queueLength": 6,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789457647371",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789462970699",
         "loadedId": 65536,
         "paused": false,
         "ended": false,
-        "currentTime": 15.379709,
+        "currentTime": 22.692996,
         "duration": 259.986667,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -837,54 +845,59 @@
         "statusClass": "status playing",
         "codexPicks": [
           {
-            "id": 326719,
-            "name": "喜欢",
-            "reason": "轻柔而亲密，适合让一天的喧闹慢慢退去。"
+            "id": 299642,
+            "name": "当时的月亮",
+            "reason": "空灵的歌声轻轻铺开，适合让夜晚慢下来。"
           },
           {
-            "id": 299936,
-            "name": "红豆",
-            "reason": "细腻悠缓，让独处时的思念有处安放。"
+            "id": 27937466,
+            "name": "忽然之间",
+            "reason": "温柔而克制，适合独自整理心里的思念。"
           },
           {
-            "id": 65979,
-            "name": "绵绵",
-            "reason": "低回的情绪适合夜深时独自回望往事。"
+            "id": 546722350,
+            "name": "十一种孤独",
+            "reason": "把孤独唱得细腻，陪你安静地与自己相处。"
           },
           {
-            "id": 28561288,
-            "name": "寻人启事",
-            "reason": "留白与倾诉感交织，适合安静听见自己的心事。"
+            "id": 1974443814,
+            "name": "我记得",
+            "reason": "随着舒缓的叙事回望记忆，让思绪慢慢漂远。"
           },
           {
             "id": 326722,
             "name": "儿歌",
-            "reason": "朴素温柔，给深夜的独处一个安心的收尾。"
+            "reason": "质朴温暖，适合在深夜收起心事，轻轻收尾。"
           }
         ],
         "queueIds": [
           65536,
-          326719,
-          299936,
-          65979,
-          28561288,
+          299642,
+          27937466,
+          546722350,
+          1974443814,
           326722
         ],
-        "codexStatus": "Codex 选出 5 首，已接在当前播放之后（用时 12.1s）。点下面任意一首可直接播放。",
-        "codexStatusClass": "status ok"
+        "codexStatus": "Codex 选出 5 首，已接在当前播放之后（用时 19.0s）。点下面任意一首可直接播放。",
+        "codexStatusClass": "status ok",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 10,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "playingPick": {
-        "currentId": 326719,
-        "currentTitle": "喜欢",
+        "currentId": 299642,
+        "currentTitle": "当时的月亮",
         "index": 1,
         "queueLength": 6,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/326719?t=1789457663122",
-        "loadedId": 326719,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/299642?t=1789462994189",
+        "loadedId": 299642,
         "paused": false,
         "ended": false,
-        "currentTime": 2.345976,
-        "duration": 279.933537,
+        "currentTime": 2.330393,
+        "duration": 231.626667,
         "readyState": 4,
         "consecutiveFailures": 0,
         "failureCount": 0,
@@ -894,60 +907,65 @@
         "playToken": 2,
         "failedIds": [],
         "lastError": null,
-        "status": "播放中：喜欢 — 张悬",
+        "status": "播放中：当时的月亮 — 王菲",
         "statusClass": "status playing",
         "codexPicks": [
           {
-            "id": 326719,
-            "name": "喜欢",
-            "reason": "轻柔而亲密，适合让一天的喧闹慢慢退去。"
+            "id": 299642,
+            "name": "当时的月亮",
+            "reason": "空灵的歌声轻轻铺开，适合让夜晚慢下来。"
           },
           {
-            "id": 299936,
-            "name": "红豆",
-            "reason": "细腻悠缓，让独处时的思念有处安放。"
+            "id": 27937466,
+            "name": "忽然之间",
+            "reason": "温柔而克制，适合独自整理心里的思念。"
           },
           {
-            "id": 65979,
-            "name": "绵绵",
-            "reason": "低回的情绪适合夜深时独自回望往事。"
+            "id": 546722350,
+            "name": "十一种孤独",
+            "reason": "把孤独唱得细腻，陪你安静地与自己相处。"
           },
           {
-            "id": 28561288,
-            "name": "寻人启事",
-            "reason": "留白与倾诉感交织，适合安静听见自己的心事。"
+            "id": 1974443814,
+            "name": "我记得",
+            "reason": "随着舒缓的叙事回望记忆，让思绪慢慢漂远。"
           },
           {
             "id": 326722,
             "name": "儿歌",
-            "reason": "朴素温柔，给深夜的独处一个安心的收尾。"
+            "reason": "质朴温暖，适合在深夜收起心事，轻轻收尾。"
           }
         ],
         "queueIds": [
           65536,
-          326719,
-          299936,
-          65979,
-          28561288,
+          299642,
+          27937466,
+          546722350,
+          1974443814,
           326722
         ],
-        "codexStatus": "Codex 选出 5 首，已接在当前播放之后（用时 12.1s）。点下面任意一首可直接播放。",
-        "codexStatusClass": "status ok"
+        "codexStatus": "Codex 选出 5 首，已接在当前播放之后（用时 19.0s）。点下面任意一首可直接播放。",
+        "codexStatusClass": "status ok",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 10,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       }
     },
     "fallback_timeout": {
       "baseline": {
-        "currentId": 326719,
-        "currentTitle": "喜欢",
+        "currentId": 299642,
+        "currentTitle": "当时的月亮",
         "index": 1,
         "queueLength": 6,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/326719?t=1789457663122",
-        "loadedId": 326719,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/299642?t=1789462994189",
+        "loadedId": 299642,
         "paused": false,
         "ended": false,
-        "currentTime": 2.415039,
-        "duration": 279.933537,
+        "currentTime": 2.396838,
+        "duration": 231.626667,
         "readyState": 4,
         "consecutiveFailures": 0,
         "failureCount": 0,
@@ -957,58 +975,63 @@
         "playToken": 2,
         "failedIds": [],
         "lastError": null,
-        "status": "播放中：喜欢 — 张悬",
+        "status": "播放中：当时的月亮 — 王菲",
         "statusClass": "status playing",
         "codexPicks": [
           {
-            "id": 326719,
-            "name": "喜欢",
-            "reason": "轻柔而亲密，适合让一天的喧闹慢慢退去。"
+            "id": 299642,
+            "name": "当时的月亮",
+            "reason": "空灵的歌声轻轻铺开，适合让夜晚慢下来。"
           },
           {
-            "id": 299936,
-            "name": "红豆",
-            "reason": "细腻悠缓，让独处时的思念有处安放。"
+            "id": 27937466,
+            "name": "忽然之间",
+            "reason": "温柔而克制，适合独自整理心里的思念。"
           },
           {
-            "id": 65979,
-            "name": "绵绵",
-            "reason": "低回的情绪适合夜深时独自回望往事。"
+            "id": 546722350,
+            "name": "十一种孤独",
+            "reason": "把孤独唱得细腻，陪你安静地与自己相处。"
           },
           {
-            "id": 28561288,
-            "name": "寻人启事",
-            "reason": "留白与倾诉感交织，适合安静听见自己的心事。"
+            "id": 1974443814,
+            "name": "我记得",
+            "reason": "随着舒缓的叙事回望记忆，让思绪慢慢漂远。"
           },
           {
             "id": 326722,
             "name": "儿歌",
-            "reason": "朴素温柔，给深夜的独处一个安心的收尾。"
+            "reason": "质朴温暖，适合在深夜收起心事，轻轻收尾。"
           }
         ],
         "queueIds": [
           65536,
-          326719,
-          299936,
-          65979,
-          28561288,
+          299642,
+          27937466,
+          546722350,
+          1974443814,
           326722
         ],
-        "codexStatus": "Codex 选出 5 首，已接在当前播放之后（用时 12.1s）。点下面任意一首可直接播放。",
-        "codexStatusClass": "status ok"
+        "codexStatus": "Codex 选出 5 首，已接在当前播放之后（用时 19.0s）。点下面任意一首可直接播放。",
+        "codexStatusClass": "status ok",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 10,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "before": {
-        "currentId": 326719,
-        "currentTitle": "喜欢",
+        "currentId": 299642,
+        "currentTitle": "当时的月亮",
         "index": 1,
         "queueLength": 6,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/326719?t=1789457663122",
-        "loadedId": 326719,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/299642?t=1789462994189",
+        "loadedId": 299642,
         "paused": false,
         "ended": false,
-        "currentTime": 2.415453,
-        "duration": 279.933537,
+        "currentTime": 2.397306,
+        "duration": 231.626667,
         "readyState": 4,
         "consecutiveFailures": 0,
         "failureCount": 0,
@@ -1018,58 +1041,63 @@
         "playToken": 2,
         "failedIds": [],
         "lastError": null,
-        "status": "播放中：喜欢 — 张悬",
+        "status": "播放中：当时的月亮 — 王菲",
         "statusClass": "status playing",
         "codexPicks": [
           {
-            "id": 326719,
-            "name": "喜欢",
-            "reason": "轻柔而亲密，适合让一天的喧闹慢慢退去。"
+            "id": 299642,
+            "name": "当时的月亮",
+            "reason": "空灵的歌声轻轻铺开，适合让夜晚慢下来。"
           },
           {
-            "id": 299936,
-            "name": "红豆",
-            "reason": "细腻悠缓，让独处时的思念有处安放。"
+            "id": 27937466,
+            "name": "忽然之间",
+            "reason": "温柔而克制，适合独自整理心里的思念。"
           },
           {
-            "id": 65979,
-            "name": "绵绵",
-            "reason": "低回的情绪适合夜深时独自回望往事。"
+            "id": 546722350,
+            "name": "十一种孤独",
+            "reason": "把孤独唱得细腻，陪你安静地与自己相处。"
           },
           {
-            "id": 28561288,
-            "name": "寻人启事",
-            "reason": "留白与倾诉感交织，适合安静听见自己的心事。"
+            "id": 1974443814,
+            "name": "我记得",
+            "reason": "随着舒缓的叙事回望记忆，让思绪慢慢漂远。"
           },
           {
             "id": 326722,
             "name": "儿歌",
-            "reason": "朴素温柔，给深夜的独处一个安心的收尾。"
+            "reason": "质朴温暖，适合在深夜收起心事，轻轻收尾。"
           }
         ],
         "queueIds": [
           65536,
-          326719,
-          299936,
-          65979,
-          28561288,
+          299642,
+          27937466,
+          546722350,
+          1974443814,
           326722
         ],
-        "codexStatus": "Codex 选出 5 首，已接在当前播放之后（用时 12.1s）。点下面任意一首可直接播放。",
-        "codexStatusClass": "status ok"
+        "codexStatus": "Codex 选出 5 首，已接在当前播放之后（用时 19.0s）。点下面任意一首可直接播放。",
+        "codexStatusClass": "status ok",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 10,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "after": {
-        "currentId": 326719,
-        "currentTitle": "喜欢",
+        "currentId": 299642,
+        "currentTitle": "当时的月亮",
         "index": 1,
         "queueLength": 6,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/326719?t=1789457663122",
-        "loadedId": 326719,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/299642?t=1789462994189",
+        "loadedId": 299642,
         "paused": false,
         "ended": false,
-        "currentTime": 5.220835,
-        "duration": 279.933537,
+        "currentTime": 5.205601,
+        "duration": 231.626667,
         "readyState": 4,
         "consecutiveFailures": 0,
         "failureCount": 0,
@@ -1079,60 +1107,65 @@
         "playToken": 2,
         "failedIds": [],
         "lastError": null,
-        "status": "播放中：喜欢 — 张悬",
+        "status": "播放中：当时的月亮 — 王菲",
         "statusClass": "status playing",
         "codexPicks": [
           {
-            "id": 326719,
-            "name": "喜欢",
-            "reason": "轻柔而亲密，适合让一天的喧闹慢慢退去。"
+            "id": 299642,
+            "name": "当时的月亮",
+            "reason": "空灵的歌声轻轻铺开，适合让夜晚慢下来。"
           },
           {
-            "id": 299936,
-            "name": "红豆",
-            "reason": "细腻悠缓，让独处时的思念有处安放。"
+            "id": 27937466,
+            "name": "忽然之间",
+            "reason": "温柔而克制，适合独自整理心里的思念。"
           },
           {
-            "id": 65979,
-            "name": "绵绵",
-            "reason": "低回的情绪适合夜深时独自回望往事。"
+            "id": 546722350,
+            "name": "十一种孤独",
+            "reason": "把孤独唱得细腻，陪你安静地与自己相处。"
           },
           {
-            "id": 28561288,
-            "name": "寻人启事",
-            "reason": "留白与倾诉感交织，适合安静听见自己的心事。"
+            "id": 1974443814,
+            "name": "我记得",
+            "reason": "随着舒缓的叙事回望记忆，让思绪慢慢漂远。"
           },
           {
             "id": 326722,
             "name": "儿歌",
-            "reason": "朴素温柔，给深夜的独处一个安心的收尾。"
+            "reason": "质朴温暖，适合在深夜收起心事，轻轻收尾。"
           }
         ],
         "queueIds": [
           65536,
-          326719,
-          299936,
-          65979,
-          28561288,
+          299642,
+          27937466,
+          546722350,
+          1974443814,
           326722
         ],
         "codexStatus": "Codex 选歌失败（timeout）：（测试注入）Codex 超过 90000ms 未返回。继续使用原队列，播放不受影响。",
-        "codexStatusClass": "status bad"
+        "codexStatusClass": "status bad",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 10,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       }
     },
     "fallback_quota": {
       "baseline": {
-        "currentId": 326719,
-        "currentTitle": "喜欢",
+        "currentId": 299642,
+        "currentTitle": "当时的月亮",
         "index": 1,
         "queueLength": 6,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/326719?t=1789457663122",
-        "loadedId": 326719,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/299642?t=1789462994189",
+        "loadedId": 299642,
         "paused": false,
         "ended": false,
-        "currentTime": 2.415039,
-        "duration": 279.933537,
+        "currentTime": 2.396838,
+        "duration": 231.626667,
         "readyState": 4,
         "consecutiveFailures": 0,
         "failureCount": 0,
@@ -1142,58 +1175,63 @@
         "playToken": 2,
         "failedIds": [],
         "lastError": null,
-        "status": "播放中：喜欢 — 张悬",
+        "status": "播放中：当时的月亮 — 王菲",
         "statusClass": "status playing",
         "codexPicks": [
           {
-            "id": 326719,
-            "name": "喜欢",
-            "reason": "轻柔而亲密，适合让一天的喧闹慢慢退去。"
+            "id": 299642,
+            "name": "当时的月亮",
+            "reason": "空灵的歌声轻轻铺开，适合让夜晚慢下来。"
           },
           {
-            "id": 299936,
-            "name": "红豆",
-            "reason": "细腻悠缓，让独处时的思念有处安放。"
+            "id": 27937466,
+            "name": "忽然之间",
+            "reason": "温柔而克制，适合独自整理心里的思念。"
           },
           {
-            "id": 65979,
-            "name": "绵绵",
-            "reason": "低回的情绪适合夜深时独自回望往事。"
+            "id": 546722350,
+            "name": "十一种孤独",
+            "reason": "把孤独唱得细腻，陪你安静地与自己相处。"
           },
           {
-            "id": 28561288,
-            "name": "寻人启事",
-            "reason": "留白与倾诉感交织，适合安静听见自己的心事。"
+            "id": 1974443814,
+            "name": "我记得",
+            "reason": "随着舒缓的叙事回望记忆，让思绪慢慢漂远。"
           },
           {
             "id": 326722,
             "name": "儿歌",
-            "reason": "朴素温柔，给深夜的独处一个安心的收尾。"
+            "reason": "质朴温暖，适合在深夜收起心事，轻轻收尾。"
           }
         ],
         "queueIds": [
           65536,
-          326719,
-          299936,
-          65979,
-          28561288,
+          299642,
+          27937466,
+          546722350,
+          1974443814,
           326722
         ],
-        "codexStatus": "Codex 选出 5 首，已接在当前播放之后（用时 12.1s）。点下面任意一首可直接播放。",
-        "codexStatusClass": "status ok"
+        "codexStatus": "Codex 选出 5 首，已接在当前播放之后（用时 19.0s）。点下面任意一首可直接播放。",
+        "codexStatusClass": "status ok",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 10,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "before": {
-        "currentId": 326719,
-        "currentTitle": "喜欢",
+        "currentId": 299642,
+        "currentTitle": "当时的月亮",
         "index": 1,
         "queueLength": 6,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/326719?t=1789457663122",
-        "loadedId": 326719,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/299642?t=1789462994189",
+        "loadedId": 299642,
         "paused": false,
         "ended": false,
-        "currentTime": 5.22297,
-        "duration": 279.933537,
+        "currentTime": 5.207398,
+        "duration": 231.626667,
         "readyState": 4,
         "consecutiveFailures": 0,
         "failureCount": 0,
@@ -1203,58 +1241,63 @@
         "playToken": 2,
         "failedIds": [],
         "lastError": null,
-        "status": "播放中：喜欢 — 张悬",
+        "status": "播放中：当时的月亮 — 王菲",
         "statusClass": "status playing",
         "codexPicks": [
           {
-            "id": 326719,
-            "name": "喜欢",
-            "reason": "轻柔而亲密，适合让一天的喧闹慢慢退去。"
+            "id": 299642,
+            "name": "当时的月亮",
+            "reason": "空灵的歌声轻轻铺开，适合让夜晚慢下来。"
           },
           {
-            "id": 299936,
-            "name": "红豆",
-            "reason": "细腻悠缓，让独处时的思念有处安放。"
+            "id": 27937466,
+            "name": "忽然之间",
+            "reason": "温柔而克制，适合独自整理心里的思念。"
           },
           {
-            "id": 65979,
-            "name": "绵绵",
-            "reason": "低回的情绪适合夜深时独自回望往事。"
+            "id": 546722350,
+            "name": "十一种孤独",
+            "reason": "把孤独唱得细腻，陪你安静地与自己相处。"
           },
           {
-            "id": 28561288,
-            "name": "寻人启事",
-            "reason": "留白与倾诉感交织，适合安静听见自己的心事。"
+            "id": 1974443814,
+            "name": "我记得",
+            "reason": "随着舒缓的叙事回望记忆，让思绪慢慢漂远。"
           },
           {
             "id": 326722,
             "name": "儿歌",
-            "reason": "朴素温柔，给深夜的独处一个安心的收尾。"
+            "reason": "质朴温暖，适合在深夜收起心事，轻轻收尾。"
           }
         ],
         "queueIds": [
           65536,
-          326719,
-          299936,
-          65979,
-          28561288,
+          299642,
+          27937466,
+          546722350,
+          1974443814,
           326722
         ],
         "codexStatus": "Codex 选歌失败（timeout）：（测试注入）Codex 超过 90000ms 未返回。继续使用原队列，播放不受影响。",
-        "codexStatusClass": "status bad"
+        "codexStatusClass": "status bad",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 10,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "after": {
-        "currentId": 326719,
-        "currentTitle": "喜欢",
+        "currentId": 299642,
+        "currentTitle": "当时的月亮",
         "index": 1,
         "queueLength": 6,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/326719?t=1789457663122",
-        "loadedId": 326719,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/299642?t=1789462994189",
+        "loadedId": 299642,
         "paused": false,
         "ended": false,
-        "currentTime": 8.044182,
-        "duration": 279.933537,
+        "currentTime": 8.027017,
+        "duration": 231.626667,
         "readyState": 4,
         "consecutiveFailures": 0,
         "failureCount": 0,
@@ -1264,60 +1307,65 @@
         "playToken": 2,
         "failedIds": [],
         "lastError": null,
-        "status": "播放中：喜欢 — 张悬",
+        "status": "播放中：当时的月亮 — 王菲",
         "statusClass": "status playing",
         "codexPicks": [
           {
-            "id": 326719,
-            "name": "喜欢",
-            "reason": "轻柔而亲密，适合让一天的喧闹慢慢退去。"
+            "id": 299642,
+            "name": "当时的月亮",
+            "reason": "空灵的歌声轻轻铺开，适合让夜晚慢下来。"
           },
           {
-            "id": 299936,
-            "name": "红豆",
-            "reason": "细腻悠缓，让独处时的思念有处安放。"
+            "id": 27937466,
+            "name": "忽然之间",
+            "reason": "温柔而克制，适合独自整理心里的思念。"
           },
           {
-            "id": 65979,
-            "name": "绵绵",
-            "reason": "低回的情绪适合夜深时独自回望往事。"
+            "id": 546722350,
+            "name": "十一种孤独",
+            "reason": "把孤独唱得细腻，陪你安静地与自己相处。"
           },
           {
-            "id": 28561288,
-            "name": "寻人启事",
-            "reason": "留白与倾诉感交织，适合安静听见自己的心事。"
+            "id": 1974443814,
+            "name": "我记得",
+            "reason": "随着舒缓的叙事回望记忆，让思绪慢慢漂远。"
           },
           {
             "id": 326722,
             "name": "儿歌",
-            "reason": "朴素温柔，给深夜的独处一个安心的收尾。"
+            "reason": "质朴温暖，适合在深夜收起心事，轻轻收尾。"
           }
         ],
         "queueIds": [
           65536,
-          326719,
-          299936,
-          65979,
-          28561288,
+          299642,
+          27937466,
+          546722350,
+          1974443814,
           326722
         ],
         "codexStatus": "Codex 选歌失败（quota）：（测试注入）Codex 订阅额度/速率受限。继续使用原队列，播放不受影响。",
-        "codexStatusClass": "status bad"
+        "codexStatusClass": "status bad",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 10,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       }
     },
     "fallback_invalid": {
       "baseline": {
-        "currentId": 326719,
-        "currentTitle": "喜欢",
+        "currentId": 299642,
+        "currentTitle": "当时的月亮",
         "index": 1,
         "queueLength": 6,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/326719?t=1789457663122",
-        "loadedId": 326719,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/299642?t=1789462994189",
+        "loadedId": 299642,
         "paused": false,
         "ended": false,
-        "currentTime": 2.415039,
-        "duration": 279.933537,
+        "currentTime": 2.396838,
+        "duration": 231.626667,
         "readyState": 4,
         "consecutiveFailures": 0,
         "failureCount": 0,
@@ -1327,58 +1375,63 @@
         "playToken": 2,
         "failedIds": [],
         "lastError": null,
-        "status": "播放中：喜欢 — 张悬",
+        "status": "播放中：当时的月亮 — 王菲",
         "statusClass": "status playing",
         "codexPicks": [
           {
-            "id": 326719,
-            "name": "喜欢",
-            "reason": "轻柔而亲密，适合让一天的喧闹慢慢退去。"
+            "id": 299642,
+            "name": "当时的月亮",
+            "reason": "空灵的歌声轻轻铺开，适合让夜晚慢下来。"
           },
           {
-            "id": 299936,
-            "name": "红豆",
-            "reason": "细腻悠缓，让独处时的思念有处安放。"
+            "id": 27937466,
+            "name": "忽然之间",
+            "reason": "温柔而克制，适合独自整理心里的思念。"
           },
           {
-            "id": 65979,
-            "name": "绵绵",
-            "reason": "低回的情绪适合夜深时独自回望往事。"
+            "id": 546722350,
+            "name": "十一种孤独",
+            "reason": "把孤独唱得细腻，陪你安静地与自己相处。"
           },
           {
-            "id": 28561288,
-            "name": "寻人启事",
-            "reason": "留白与倾诉感交织，适合安静听见自己的心事。"
+            "id": 1974443814,
+            "name": "我记得",
+            "reason": "随着舒缓的叙事回望记忆，让思绪慢慢漂远。"
           },
           {
             "id": 326722,
             "name": "儿歌",
-            "reason": "朴素温柔，给深夜的独处一个安心的收尾。"
+            "reason": "质朴温暖，适合在深夜收起心事，轻轻收尾。"
           }
         ],
         "queueIds": [
           65536,
-          326719,
-          299936,
-          65979,
-          28561288,
+          299642,
+          27937466,
+          546722350,
+          1974443814,
           326722
         ],
-        "codexStatus": "Codex 选出 5 首，已接在当前播放之后（用时 12.1s）。点下面任意一首可直接播放。",
-        "codexStatusClass": "status ok"
+        "codexStatus": "Codex 选出 5 首，已接在当前播放之后（用时 19.0s）。点下面任意一首可直接播放。",
+        "codexStatusClass": "status ok",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 10,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "before": {
-        "currentId": 326719,
-        "currentTitle": "喜欢",
+        "currentId": 299642,
+        "currentTitle": "当时的月亮",
         "index": 1,
         "queueLength": 6,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/326719?t=1789457663122",
-        "loadedId": 326719,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/299642?t=1789462994189",
+        "loadedId": 299642,
         "paused": false,
         "ended": false,
-        "currentTime": 8.047159,
-        "duration": 279.933537,
+        "currentTime": 8.028925,
+        "duration": 231.626667,
         "readyState": 4,
         "consecutiveFailures": 0,
         "failureCount": 0,
@@ -1388,58 +1441,63 @@
         "playToken": 2,
         "failedIds": [],
         "lastError": null,
-        "status": "播放中：喜欢 — 张悬",
+        "status": "播放中：当时的月亮 — 王菲",
         "statusClass": "status playing",
         "codexPicks": [
           {
-            "id": 326719,
-            "name": "喜欢",
-            "reason": "轻柔而亲密，适合让一天的喧闹慢慢退去。"
+            "id": 299642,
+            "name": "当时的月亮",
+            "reason": "空灵的歌声轻轻铺开，适合让夜晚慢下来。"
           },
           {
-            "id": 299936,
-            "name": "红豆",
-            "reason": "细腻悠缓，让独处时的思念有处安放。"
+            "id": 27937466,
+            "name": "忽然之间",
+            "reason": "温柔而克制，适合独自整理心里的思念。"
           },
           {
-            "id": 65979,
-            "name": "绵绵",
-            "reason": "低回的情绪适合夜深时独自回望往事。"
+            "id": 546722350,
+            "name": "十一种孤独",
+            "reason": "把孤独唱得细腻，陪你安静地与自己相处。"
           },
           {
-            "id": 28561288,
-            "name": "寻人启事",
-            "reason": "留白与倾诉感交织，适合安静听见自己的心事。"
+            "id": 1974443814,
+            "name": "我记得",
+            "reason": "随着舒缓的叙事回望记忆，让思绪慢慢漂远。"
           },
           {
             "id": 326722,
             "name": "儿歌",
-            "reason": "朴素温柔，给深夜的独处一个安心的收尾。"
+            "reason": "质朴温暖，适合在深夜收起心事，轻轻收尾。"
           }
         ],
         "queueIds": [
           65536,
-          326719,
-          299936,
-          65979,
-          28561288,
+          299642,
+          27937466,
+          546722350,
+          1974443814,
           326722
         ],
         "codexStatus": "Codex 选歌失败（quota）：（测试注入）Codex 订阅额度/速率受限。继续使用原队列，播放不受影响。",
-        "codexStatusClass": "status bad"
+        "codexStatusClass": "status bad",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 10,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "after": {
-        "currentId": 326719,
-        "currentTitle": "喜欢",
+        "currentId": 299642,
+        "currentTitle": "当时的月亮",
         "index": 1,
         "queueLength": 6,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/326719?t=1789457663122",
-        "loadedId": 326719,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/299642?t=1789462994189",
+        "loadedId": 299642,
         "paused": false,
         "ended": false,
-        "currentTime": 10.865144,
-        "duration": 279.933537,
+        "currentTime": 10.848512,
+        "duration": 231.626667,
         "readyState": 4,
         "consecutiveFailures": 0,
         "failureCount": 0,
@@ -1449,45 +1507,50 @@
         "playToken": 2,
         "failedIds": [],
         "lastError": null,
-        "status": "播放中：喜欢 — 张悬",
+        "status": "播放中：当时的月亮 — 王菲",
         "statusClass": "status playing",
         "codexPicks": [
           {
-            "id": 326719,
-            "name": "喜欢",
-            "reason": "轻柔而亲密，适合让一天的喧闹慢慢退去。"
+            "id": 299642,
+            "name": "当时的月亮",
+            "reason": "空灵的歌声轻轻铺开，适合让夜晚慢下来。"
           },
           {
-            "id": 299936,
-            "name": "红豆",
-            "reason": "细腻悠缓，让独处时的思念有处安放。"
+            "id": 27937466,
+            "name": "忽然之间",
+            "reason": "温柔而克制，适合独自整理心里的思念。"
           },
           {
-            "id": 65979,
-            "name": "绵绵",
-            "reason": "低回的情绪适合夜深时独自回望往事。"
+            "id": 546722350,
+            "name": "十一种孤独",
+            "reason": "把孤独唱得细腻，陪你安静地与自己相处。"
           },
           {
-            "id": 28561288,
-            "name": "寻人启事",
-            "reason": "留白与倾诉感交织，适合安静听见自己的心事。"
+            "id": 1974443814,
+            "name": "我记得",
+            "reason": "随着舒缓的叙事回望记忆，让思绪慢慢漂远。"
           },
           {
             "id": 326722,
             "name": "儿歌",
-            "reason": "朴素温柔，给深夜的独处一个安心的收尾。"
+            "reason": "质朴温暖，适合在深夜收起心事，轻轻收尾。"
           }
         ],
         "queueIds": [
           65536,
-          326719,
-          299936,
-          65979,
-          28561288,
+          299642,
+          27937466,
+          546722350,
+          1974443814,
           326722
         ],
         "codexStatus": "Codex 选歌失败（invalid_output）：Codex 输出的 2 条全部不合法（id 不在候选集里 / 重复 / 缺理由）。继续使用原队列，播放不受影响。",
-        "codexStatusClass": "status bad"
+        "codexStatusClass": "status bad",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 10,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       }
     }
   },

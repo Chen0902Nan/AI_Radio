@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-15T07:37:12.390Z",
+  "at": "2026-09-15T09:01:44.665Z",
   "base": "http://127.0.0.1:8787",
   "checks": [
     {
@@ -192,11 +192,11 @@
         "index": 0,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789457837562",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789462910761",
         "loadedId": 65536,
         "paused": false,
         "ended": false,
-        "currentTime": 2.769593,
+        "currentTime": 2.782493,
         "duration": 259.986667,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -669,7 +669,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 5,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "queued": {
         "currentId": 25638273,
@@ -677,11 +682,11 @@
         "index": 3,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789457837562",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789462910761",
         "loadedId": 65536,
         "paused": false,
         "ended": false,
-        "currentTime": 3.047975,
+        "currentTime": 3.062053,
         "duration": 259.986667,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -1154,7 +1159,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": null,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "after": {
         "currentId": 25638273,
@@ -1162,11 +1172,11 @@
         "index": 3,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789457841204",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789462914370",
         "loadedId": 25638273,
         "paused": false,
         "ended": false,
-        "currentTime": 5.598218,
+        "currentTime": 5.599167,
         "duration": 198.613333,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -1639,7 +1649,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 6,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "settled": {
         "currentId": 25638273,
@@ -1647,11 +1662,11 @@
         "index": 3,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789457841204",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789462914370",
         "loadedId": 25638273,
         "paused": false,
         "ended": false,
-        "currentTime": 9.098326,
+        "currentTime": 9.108844,
         "duration": 198.613333,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -2124,7 +2139,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 6,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "elapsedMs": 9782
     },
@@ -2135,11 +2155,11 @@
         "index": 3,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789457841204",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789462914370",
         "loadedId": 25638273,
         "paused": false,
         "ended": false,
-        "currentTime": 9.100035,
+        "currentTime": 9.110476,
         "duration": 198.613333,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -2612,7 +2632,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 6,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "during": {
         "currentId": 489302317,
@@ -2620,11 +2645,11 @@
         "index": 4,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789457841204",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789462914370",
         "loadedId": 25638273,
         "paused": false,
         "ended": false,
-        "currentTime": 9.414377,
+        "currentTime": 9.416476,
         "duration": 198.613333,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -3097,7 +3122,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": null,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "afterPause": {
         "currentId": 489302317,
@@ -3105,11 +3135,11 @@
         "index": 4,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789457841204",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789462914370",
         "loadedId": 25638273,
         "paused": true,
         "ended": false,
-        "currentTime": 9.417111,
+        "currentTime": 9.433066,
         "duration": 198.613333,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -3582,7 +3612,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": null,
+        "feedback": {},
+        "playButtonLabel": "继续"
       },
       "afterLate": {
         "currentId": 489302317,
@@ -3590,11 +3625,11 @@
         "index": 4,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789457841204",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789462914370",
         "loadedId": 25638273,
         "paused": true,
         "ended": false,
-        "currentTime": 9.417111,
+        "currentTime": 9.433066,
         "duration": 198.613333,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -4067,7 +4102,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": null,
+        "feedback": {},
+        "playButtonLabel": "继续"
       }
     },
     "resolveTrace": [
@@ -4081,55 +4121,55 @@
         "kind": "response",
         "id": 65536,
         "status": 200,
-        "at": 18
+        "at": 3
       },
       {
         "kind": "request",
         "id": 65538,
         "delayMs": 1600,
-        "at": 3137
+        "at": 3123
       },
       {
         "kind": "request",
         "id": 167937,
         "delayMs": 800,
-        "at": 3270
+        "at": 3255
       },
       {
         "kind": "request",
         "id": 25638273,
         "delayMs": 0,
-        "at": 3404
+        "at": 3389
       },
       {
         "kind": "response",
         "id": 25638273,
         "status": 200,
-        "at": 3659
+        "at": 3612
       },
       {
         "kind": "response",
         "id": 167937,
         "status": 200,
-        "at": 4073
+        "at": 4058
       },
       {
         "kind": "response",
         "id": 65538,
         "status": 200,
-        "at": 4740
+        "at": 4726
       },
       {
         "kind": "request",
         "id": 489302317,
         "delayMs": 1800,
-        "at": 12920
+        "at": 12905
       },
       {
         "kind": "response",
         "id": 489302317,
         "status": 200,
-        "at": 14933
+        "at": 14932
       }
     ],
     "fixP1": {
@@ -4139,11 +4179,11 @@
         "index": 1,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789457855794",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789462928993",
         "loadedId": 65536,
         "paused": false,
         "ended": false,
-        "currentTime": 2.283558,
+        "currentTime": 2.281953,
         "duration": 259.986667,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -4616,7 +4656,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": null,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "paused": {
         "currentId": 65538,
@@ -4624,11 +4669,11 @@
         "index": 1,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789457855794",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789462928993",
         "loadedId": 65536,
         "paused": true,
         "ended": false,
-        "currentTime": 2.300113,
+        "currentTime": 2.296914,
         "duration": 259.986667,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -5101,7 +5146,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": null,
+        "feedback": {},
+        "playButtonLabel": "继续"
       },
       "resumed": {
         "currentId": 65538,
@@ -5109,11 +5159,11 @@
         "index": 1,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65538?t=1789457858577",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65538?t=1789462931760",
         "loadedId": 65538,
         "paused": false,
         "ended": false,
-        "currentTime": 4.82908,
+        "currentTime": 4.833783,
         "duration": 250.543311,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -5586,7 +5636,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 8,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       }
     },
     "fixP2": {
@@ -5596,11 +5651,11 @@
         "index": 1,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65538?t=1789457858577",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65538?t=1789462931760",
         "loadedId": 65538,
         "paused": false,
         "ended": false,
-        "currentTime": 4.835319,
+        "currentTime": 4.852951,
         "duration": 250.543311,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -6073,7 +6128,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 8,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       },
       "manualStable": true,
       "afterTimer": {
@@ -6082,11 +6142,11 @@
         "index": 2,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/167937?t=1789457863963",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/167937?t=1789462937142",
         "loadedId": 167937,
         "paused": false,
         "ended": false,
-        "currentTime": 4.591067,
+        "currentTime": 4.580563,
         "duration": 227.160816,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -6565,7 +6625,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 9,
+        "feedback": {},
+        "playButtonLabel": "暂停"
       }
     },
     "fixP3": {
@@ -6575,11 +6640,11 @@
         "index": 0,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789457868693",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789462941877",
         "loadedId": 65536,
         "paused": true,
         "ended": false,
-        "currentTime": 1.901322,
+        "currentTime": 1.873404,
         "duration": 259.986667,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -7058,7 +7123,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 9,
+        "feedback": {},
+        "playButtonLabel": "继续"
       },
       "after": {
         "currentId": 65536,
@@ -7066,7 +7136,7 @@
         "index": 0,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789457871371",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789462944758",
         "loadedId": 65536,
         "paused": true,
         "ended": false,
@@ -7549,7 +7619,12 @@
           65533
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
-        "codexStatusClass": "status"
+        "codexStatusClass": "status",
+        "sessionId": "s_mu2g0izb_r7xgs0",
+        "adjustments": {},
+        "playId": 9,
+        "feedback": {},
+        "playButtonLabel": "继续"
       },
       "p3TrackId": 65536,
       "audioResponses": [

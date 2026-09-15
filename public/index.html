@@ -30,12 +30,21 @@
         </div>
 
         <div class="controls">
-          <button id="play" class="primary" disabled>播放</button>
+          <button id="play" class="primary" disabled>开播</button>
           <button id="next" disabled>下一首</button>
+          <button id="stop" disabled>停止</button>
           <span class="counter" id="counter"></span>
         </div>
 
-        <div class="status" id="status">先登录并读取资料，然后点击播放。</div>
+        <div class="controls secondary">
+          <span class="hint">对这首歌：</span>
+          <button id="like">喜欢</button>
+          <button id="dislike">不喜欢</button>
+          <button id="unlike" class="ghost">撤销反馈</button>
+          <span class="session" id="session">未开播</span>
+        </div>
+
+        <div class="status" id="status">先登录并读取资料，然后点击开播。</div>
       </section>
 
       <section class="codex">
