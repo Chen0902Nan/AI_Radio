@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-15T03:25:09.971Z",
+  "at": "2026-09-15T07:00:07.201Z",
   "base": "http://127.0.0.1:8787",
   "checks": [
     {
@@ -45,6 +45,59 @@
       "detail": {
         "userWantsPlayback": false,
         "paused": true
+      }
+    },
+    {
+      "name": "P1 切歌加载中暂停后恢复，播放的是界面显示的那首（不是旧歌）",
+      "ok": true,
+      "detail": {
+        "oldTrackId": 65536,
+        "uiTrackId": 65538,
+        "audioSrcId": 65538,
+        "currentId": 65538,
+        "note": "audioSrcId 停在旧歌上就是恢复错了"
+      }
+    },
+    {
+      "name": "P2 失败后的自动换歌定时器不会切走用户手动选的歌",
+      "ok": true,
+      "detail": {
+        "manualPickId": 167937,
+        "manualPickHeldFor1_5s": true,
+        "currentIdAfterTimer": 167937,
+        "currentTitle": "断桥残雪",
+        "audioSrcId": 167937
+      }
+    },
+    {
+      "name": "P3 前置：确实制造了真实的音频流失败",
+      "ok": true,
+      "detail": {
+        "audioResponses": [
+          502,
+          206
+        ],
+        "trigger": "暂停后对同一首歌重发请求，服务端注入 502"
+      }
+    },
+    {
+      "name": "P3 暂停期间到达的媒体错误不会自动出声",
+      "ok": true,
+      "detail": {
+        "paused": true,
+        "userWantsPlayback": false,
+        "status": "播放地址已刷新，等待继续播放。"
+      }
+    },
+    {
+      "name": "P3 暂停期间仍然刷新了播放地址（只换地址、不出声）",
+      "ok": true,
+      "detail": {
+        "attemptsBefore": 12,
+        "attemptsAfter": 14,
+        "loadedId": 65536,
+        "currentId": 65536,
+        "note": "确认错误路径真的跑到了，否则上一条可能是空过"
       }
     },
     {
@@ -139,10 +192,11 @@
         "index": 0,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789442716159",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789455613415",
+        "loadedId": 65536,
         "paused": false,
         "ended": false,
-        "currentTime": 2.763338,
+        "currentTime": 2.572106,
         "duration": 259.986667,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -162,10 +216,11 @@
         "index": 3,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789442716159",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789455613415",
+        "loadedId": 65536,
         "paused": false,
         "ended": false,
-        "currentTime": 3.042755,
+        "currentTime": 2.847361,
         "duration": 259.986667,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -185,10 +240,11 @@
         "index": 3,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789442719789",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789455616997",
+        "loadedId": 25638273,
         "paused": false,
         "ended": false,
-        "currentTime": 5.550252,
+        "currentTime": 5.675841,
         "duration": 198.613333,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -208,10 +264,11 @@
         "index": 3,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789442719789",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789455616997",
+        "loadedId": 25638273,
         "paused": false,
         "ended": false,
-        "currentTime": 9.050516,
+        "currentTime": 9.173989,
         "duration": 198.613333,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -225,7 +282,7 @@
         "status": "播放中：梦想天空分外蓝 — 陈奕迅",
         "statusClass": "status playing"
       },
-      "elapsedMs": 9783
+      "elapsedMs": 9790
     },
     "fixB": {
       "before": {
@@ -234,10 +291,11 @@
         "index": 3,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789442719789",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789455616997",
+        "loadedId": 25638273,
         "paused": false,
         "ended": false,
-        "currentTime": 9.051636,
+        "currentTime": 9.177118,
         "duration": 198.613333,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -257,10 +315,11 @@
         "index": 4,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789442719789",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789455616997",
+        "loadedId": 25638273,
         "paused": false,
         "ended": false,
-        "currentTime": 9.369437,
+        "currentTime": 9.491365,
         "duration": 198.613333,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -280,10 +339,11 @@
         "index": 4,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789442719789",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789455616997",
+        "loadedId": 25638273,
         "paused": true,
         "ended": false,
-        "currentTime": 9.382953,
+        "currentTime": 9.506443,
         "duration": 198.613333,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -303,10 +363,11 @@
         "index": 4,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789442719789",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789455616997",
+        "loadedId": 25638273,
         "paused": true,
         "ended": false,
-        "currentTime": 9.382953,
+        "currentTime": 9.506443,
         "duration": 198.613333,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -332,57 +393,255 @@
         "kind": "response",
         "id": 65536,
         "status": 200,
-        "at": 13
+        "at": 23
       },
       {
         "kind": "request",
         "id": 65538,
         "delayMs": 1600,
-        "at": 3122
+        "at": 3133
       },
       {
         "kind": "request",
         "id": 167937,
         "delayMs": 800,
-        "at": 3255
+        "at": 3265
       },
       {
         "kind": "request",
         "id": 25638273,
         "delayMs": 0,
-        "at": 3388
+        "at": 3397
       },
       {
         "kind": "response",
         "id": 25638273,
         "status": 200,
-        "at": 3643
+        "at": 3604
       },
       {
         "kind": "response",
         "id": 167937,
         "status": 200,
-        "at": 4349
+        "at": 4069
       },
       {
         "kind": "response",
         "id": 65538,
         "status": 200,
-        "at": 5449
+        "at": 4737
       },
       {
         "kind": "request",
         "id": 489302317,
         "delayMs": 1800,
-        "at": 12906
+        "at": 12913
       },
       {
         "kind": "response",
         "id": 489302317,
         "status": 200,
-        "at": 14936
+        "at": 14933
       }
     ],
+    "fixP1": {
+      "switching": {
+        "currentId": 65538,
+        "currentTitle": "好久不见",
+        "index": 1,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789455631637",
+        "loadedId": 65536,
+        "paused": false,
+        "ended": false,
+        "currentTime": 2.285848,
+        "duration": 259.986667,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 0,
+        "resolveAttempts": 7,
+        "resolving": true,
+        "userWantsPlayback": true,
+        "playToken": 8,
+        "failedIds": [],
+        "lastError": null,
+        "status": "解析音源：好久不见…",
+        "statusClass": "status"
+      },
+      "paused": {
+        "currentId": 65538,
+        "currentTitle": "好久不见",
+        "index": 1,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789455631637",
+        "loadedId": 65536,
+        "paused": true,
+        "ended": false,
+        "currentTime": 2.303101,
+        "duration": 259.986667,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 0,
+        "resolveAttempts": 7,
+        "resolving": false,
+        "userWantsPlayback": false,
+        "playToken": 9,
+        "failedIds": [],
+        "lastError": null,
+        "status": "已暂停。",
+        "statusClass": "status"
+      },
+      "resumed": {
+        "currentId": 65538,
+        "currentTitle": "好久不见",
+        "index": 1,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65538?t=1789455634403",
+        "loadedId": 65538,
+        "paused": false,
+        "ended": false,
+        "currentTime": 4.842486,
+        "duration": 250.543311,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 0,
+        "resolveAttempts": 8,
+        "resolving": false,
+        "userWantsPlayback": true,
+        "playToken": 10,
+        "failedIds": [],
+        "lastError": null,
+        "status": "播放中：好久不见 — 陈奕迅",
+        "statusClass": "status playing"
+      }
+    },
+    "fixP2": {
+      "before": {
+        "currentId": 65538,
+        "currentTitle": "好久不见",
+        "index": 1,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65538?t=1789455634403",
+        "loadedId": 65538,
+        "paused": false,
+        "ended": false,
+        "currentTime": 4.859862,
+        "duration": 250.543311,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 0,
+        "resolveAttempts": 9,
+        "resolving": true,
+        "userWantsPlayback": true,
+        "playToken": 11,
+        "failedIds": [],
+        "lastError": null,
+        "status": "解析音源：好久不见…",
+        "statusClass": "status"
+      },
+      "manualStable": true,
+      "afterTimer": {
+        "currentId": 167937,
+        "currentTitle": "断桥残雪",
+        "index": 2,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/167937?t=1789455639787",
+        "loadedId": 167937,
+        "paused": false,
+        "ended": false,
+        "currentTime": 4.582963,
+        "duration": 227.160816,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 1,
+        "resolveAttempts": 11,
+        "resolving": false,
+        "userWantsPlayback": true,
+        "playToken": 13,
+        "failedIds": [
+          167937
+        ],
+        "lastError": {
+          "id": 167937,
+          "name": "断桥残雪",
+          "reason": "（测试注入）该曲目音源解析失败"
+        },
+        "status": "播放中：断桥残雪 — 许嵩",
+        "statusClass": "status playing"
+      }
+    },
+    "fixP3": {
+      "paused": {
+        "currentId": 65536,
+        "currentTitle": "爱情转移",
+        "index": 0,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789455645988",
+        "loadedId": 65536,
+        "paused": true,
+        "ended": false,
+        "currentTime": 1.811873,
+        "duration": 259.986667,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 1,
+        "resolveAttempts": 12,
+        "resolving": false,
+        "userWantsPlayback": false,
+        "playToken": 15,
+        "failedIds": [
+          167937
+        ],
+        "lastError": {
+          "id": 167937,
+          "name": "断桥残雪",
+          "reason": "（测试注入）该曲目音源解析失败"
+        },
+        "status": "已暂停。",
+        "statusClass": "status"
+      },
+      "after": {
+        "currentId": 65536,
+        "currentTitle": "爱情转移",
+        "index": 0,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789455648797",
+        "loadedId": 65536,
+        "paused": true,
+        "ended": false,
+        "currentTime": 0,
+        "duration": 259.986667,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 1,
+        "resolveAttempts": 14,
+        "resolving": false,
+        "userWantsPlayback": false,
+        "playToken": 15,
+        "failedIds": [
+          167937
+        ],
+        "lastError": {
+          "id": 167937,
+          "name": "断桥残雪",
+          "reason": "（测试注入）该曲目音源解析失败"
+        },
+        "status": "播放地址已刷新，等待继续播放。",
+        "statusClass": "status warn"
+      },
+      "p3TrackId": 65536,
+      "audioResponses": [
+        502,
+        206
+      ]
+    },
     "fixC": {
       "r1": {
         "status": 200,
@@ -548,7 +807,7 @@
     }
   },
   "summary": {
-    "passed": 13,
+    "passed": 18,
     "failed": 0
   }
 }

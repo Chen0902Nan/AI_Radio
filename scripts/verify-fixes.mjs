@@ -72,7 +72,9 @@ async function resolve(id, force = false) {
 
 /* ---------------- A / B：播放器并发与暂停 ---------------- */
 
-async function runBrowserChecks() {
+async function runBrowserChecks(targets) {
+  const [primary, alt1, alt2] = targets
+  if (!alt2) throw new Error('需要至少 3 首可完整播放的曲目才能做这组验证')
   const browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: HEADLESS ? 'new' : false,
@@ -188,6 +190,118 @@ async function runBrowserChecks() {
   })
   report.evidence.fixB = { before: beforeB, during: duringB, afterPause: afterPauseB, afterLate: afterLateB }
   report.evidence.resolveTrace = resolveTrace.map((e) => ({ ...e, at: e.at - resolveTrace[0].at }))
+
+  async function playRow(id, { minTime = 1.5 } = {}) {
+    await page.click(`#tracks .track[data-id="${id}"]`)
+    await waitFor(async () => {
+      const s = await state()
+      return s && srcId(s) === id && !s.paused && s.currentTime > minTime
+    }, { timeout: 30000, label: `播放 ${id}` })
+  }
+
+  /* ---- P1：切歌加载中暂停，再点播放 ---- */
+  await playRow(primary.id)
+  resolveDelays.push(1600)
+  await page.click('#next') // state.current 已变成下一首，但 audio 里还是 primary
+  await sleep(400)
+  const switchingP1 = await state()
+  await page.click('#play') // 加载中暂停
+  await sleep(300)
+  const pausedP1 = await state()
+  await page.click('#play') // 再点播放
+  await sleep(5000)
+  const resumedP1 = await state()
+  check('P1 切歌加载中暂停后恢复，播放的是界面显示的那首（不是旧歌）',
+    srcId(resumedP1) === resumedP1.currentId && srcId(resumedP1) !== primary.id, {
+      oldTrackId: primary.id,
+      uiTrackId: switchingP1.currentId,
+      audioSrcId: srcId(resumedP1),
+      currentId: resumedP1.currentId,
+      note: 'audioSrcId 停在旧歌上就是恢复错了',
+    })
+  report.evidence.fixP1 = { switching: switchingP1, paused: pausedP1, resumed: resumedP1 }
+
+  /* ---- P2：失败后的换歌定时器不能切走用户手动选的歌 ---- */
+  await playRow(alt1.id)
+  const beforeP2 = await state()
+  await post('/api/_test/fail-next', { count: 1 })
+  await page.click('#next') // 下一首会被注入成失败，1.2s 后会安排自动换歌
+  await sleep(350)
+  // 在定时器触发前手动选另一首。这里不能用会抛超时的等待：
+  // 缺陷版本下定时器会立刻把歌切走，手动选的那首可能根本稳不住。
+  await page.click(`#tracks .track[data-id="${alt2.id}"]`)
+  let manualStable = true
+  try {
+    await waitFor(async () => {
+      const s = await state()
+      return s && srcId(s) === alt2.id && !s.paused && s.currentTime > 1
+    }, { timeout: 15000, label: '手动选歌开始播放' })
+  } catch (_) {
+    manualStable = false
+  }
+  await sleep(3500) // 越过 1.2s 退避，观察定时器是否还在切歌
+  const afterP2 = await state()
+  check('P2 失败后的自动换歌定时器不会切走用户手动选的歌',
+    afterP2.currentId === alt2.id && srcId(afterP2) === alt2.id, {
+      manualPickId: alt2.id,
+      manualPickHeldFor1_5s: manualStable,
+      currentIdAfterTimer: afterP2.currentId,
+      currentTitle: afterP2.currentTitle,
+      audioSrcId: srcId(afterP2),
+    })
+  report.evidence.fixP2 = { before: beforeP2, manualStable, afterTimer: afterP2 }
+
+  /* ---- P3：暂停期间到达的媒体错误不能自动出声 ---- */
+  await playRow(primary.id)
+  await page.click('#play') // 暂停
+  await sleep(400)
+  const pausedP3 = await state()
+  if (pausedP3.paused !== true) throw new Error('P3 前置失败：没有进入暂停状态')
+  const p3TrackId = pausedP3.currentId
+
+  // 注入真实的音频流 502，并让媒体元素对同一首歌重发一次真实请求。
+  // 注意两个坑：1) 不能只调 load()，Chrome 会直接用媒体缓存回应，不会发网络请求；
+  // 2) preload="none" 时改了 src 也不会去拉，必须显式允许预加载。
+  await post('/api/_test/fail-audio-next', { count: 1 })
+  const audioResponses = []
+  page.on('response', (res) => {
+    if (res.url().includes('/api/audio/')) audioResponses.push(res.status())
+  })
+  await page.evaluate(() => {
+    const a = document.querySelector('audio')
+    a.preload = 'auto'
+    const u = new URL(a.src)
+    u.searchParams.set('t', Date.now())
+    a.src = u.toString()
+    a.load()
+  })
+  await sleep(6000)
+  const afterP3 = await state()
+
+  check('P3 前置：确实制造了真实的音频流失败', audioResponses.includes(502), {
+    audioResponses,
+    trigger: '暂停后对同一首歌重发请求，服务端注入 502',
+  })
+  check('P3 暂停期间到达的媒体错误不会自动出声',
+    afterP3.paused === true && afterP3.userWantsPlayback === false, {
+      paused: afterP3.paused,
+      userWantsPlayback: afterP3.userWantsPlayback,
+      status: afterP3.status,
+    })
+  check('P3 暂停期间仍然刷新了播放地址（只换地址、不出声）',
+    afterP3.resolveAttempts > pausedP3.resolveAttempts && afterP3.loadedId === afterP3.currentId, {
+      attemptsBefore: pausedP3.resolveAttempts,
+      attemptsAfter: afterP3.resolveAttempts,
+      loadedId: afterP3.loadedId,
+      currentId: afterP3.currentId,
+      note: '确认错误路径真的跑到了，否则上一条可能是空过',
+    })
+  report.evidence.fixP3 = {
+    paused: pausedP3,
+    after: afterP3,
+    p3TrackId,
+    audioResponses,
+  }
 
   await browser.close()
 }
@@ -344,20 +458,19 @@ async function main() {
   log(`服务在线：${health.account.nickname}\n`)
 
   const lib = await (await fetch(BASE + '/api/library')).json()
-  const probe = lib.liked.tracks.slice(0, 15)
-  let target = null
+  const probe = lib.liked.tracks.slice(0, 30)
+  const playable = []
   for (const t of probe) {
     const r = await resolve(t.id)
-    if (r.playable) {
-      target = t
-      break
-    }
+    if (r.playable) playable.push(t)
+    if (playable.length >= 3) break
   }
-  if (!target) throw new Error('前 15 首里没有可完整播放的曲目')
-  log(`使用曲目：${target.name} — ${target.artists}（id ${target.id}）\n`)
+  if (playable.length < 3) throw new Error('前 30 首里可完整播放的曲目不足 3 首')
+  const target = playable[0]
+  log(`使用曲目：${playable.map((t) => `${t.name}(id ${t.id})`).join('、')}\n`)
 
-  log('— A / B：播放器并发与暂停 —')
-  await runBrowserChecks()
+  log('— A / B / P1 / P2 / P3：播放器并发、暂停与续播 —')
+  await runBrowserChecks(playable)
 
   log('\n— C：刷新确认不可播放后清缓存 —')
   await runCacheInvalidationCheck(target.id)

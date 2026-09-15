@@ -55,6 +55,7 @@ window.__radio = {
       queueLength: state.queue.length,
       started: state.started,
       audioSrc: audio.currentSrc || audio.src || '',
+      loadedId: loadedSrcId(),
       paused: audio.paused,
       ended: audio.ended,
       currentTime: audio.currentTime,
@@ -299,8 +300,11 @@ function handleTrackFailure(track, reason, index) {
     return
   }
   setStatus(`「${track.name}」失败：${reason} → ${RETRY_DELAY_MS / 1000}s 后自动换下一首`, 'warn')
+  const timerToken = playToken
   setTimeout(() => {
-    // 用户在这段退避里点了暂停/停止，就不要把播放重新拉起来
+    // 退避期间用户可能已经手动选了别的歌或点了暂停：
+    // 代次变了就说明这次自动换歌已经过期，不能再把用户选的歌切走。
+    if (timerToken !== playToken) return
     if (!state.stopped && userWantsPlayback) playIndex(index + 1)
   }, RETRY_DELAY_MS)
 }
@@ -353,6 +357,11 @@ audio.addEventListener('error', () => {
     refreshCurrent()
     return
   }
+  // 用户已经暂停/停止：这不算“播放中断”，不要记账也不要自动换歌
+  if (!userWantsPlayback) {
+    setStatus('已暂停；播放地址刷新后仍未取到可用地址。', 'warn')
+    return
+  }
   handleTrackFailure(state.current, '播放地址失效且刷新后仍失败', state.index)
 })
 
@@ -365,9 +374,20 @@ async function refreshCurrent() {
     if (token !== playToken) return
     if (!r.ok || !r.playable) throw new Error(r.message || '刷新未取得可用地址')
     audio.src = r.audioUrl + '?t=' + Date.now()
+    // 刷新地址是为了能继续听，不是为了自动出声：
+    // 如果用户已经暂停，只把地址换好，等他本人点播放。
+    if (!userWantsPlayback) {
+      setStatus('播放地址已刷新，等待继续播放。', 'warn')
+      updateControls()
+      return
+    }
     await audio.play()
   } catch (err) {
     if (token !== playToken) return
+    if (!userWantsPlayback) {
+      setStatus('已暂停；刷新播放地址失败：' + err.message, 'warn')
+      return
+    }
     handleTrackFailure(track, '刷新地址失败：' + err.message, state.index)
   }
 }
@@ -393,13 +413,24 @@ function pausePlayback() {
   updateControls()
 }
 
+/** 当前 <audio> 里实际装着哪首歌（切歌解析期间它可能还是上一首）。 */
+function loadedSrcId() {
+  const src = audio.currentSrc || audio.src || ''
+  const m = src.match(/\/api\/audio\/(\d+)/)
+  return m ? Number(m[1]) : null
+}
+
 el.play.onclick = async () => {
   // 正在解析（加载中）也允许暂停：这里必须取消在途请求，否则结果回来后会把播放重新拉起
   if (state.resolving || (state.started && !audio.paused)) {
     pausePlayback()
     return
   }
-  if (audio.src && audio.currentTime > 0) {
+  // 只有“已经装进播放器的就是列表当前这首”时才能直接续播。
+  // 切歌加载中暂停过的话，播放器里还是上一首，直接续播会变成界面显示新歌、实际放旧歌。
+  const loaded = loadedSrcId()
+  const currentId = state.current ? state.current.id : null
+  if (loaded && loaded === currentId && audio.currentTime > 0) {
     playToken += 1
     userWantsPlayback = true
     try {

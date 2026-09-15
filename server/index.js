@@ -17,6 +17,9 @@ const TEST_HOOKS = process.env.RADIO_TEST_HOOKS === '1'
 
 // 故障注入开关：只影响“解析音源”这一步，用于验证单曲失败换歌。
 let injectResolveFailures = 0
+// 故障注入开关：让接下来的 N 次 /api/audio 请求返回 502，
+// 用于验证“播放中途音源失效 → 刷新地址”这条链路。
+let injectAudioFailures = 0
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -69,6 +72,11 @@ async function readBody(req) {
 /* ---------- 音频转发 ---------- */
 
 async function streamAudio(req, res, id) {
+  if (injectAudioFailures > 0) {
+    injectAudioFailures -= 1
+    sendJson(res, 502, { code: 'injected_audio_failure', message: '（测试注入）音频流获取失败' })
+    return
+  }
   let info
   try {
     info = await ncm.resolveTrack(id)
@@ -239,6 +247,13 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req)
       injectResolveFailures = Number(body.count ?? 1)
       return sendJson(res, 200, { ok: true, pendingFailures: injectResolveFailures })
+    }
+
+    if (p === '/api/_test/fail-audio-next' && TEST_HOOKS) {
+      // 模拟音源 CDN 中途失效，用于验证刷新地址的链路
+      const body = await readBody(req)
+      injectAudioFailures = Number(body.count ?? 1)
+      return sendJson(res, 200, { ok: true, pendingAudioFailures: injectAudioFailures })
     }
 
     if (p === '/api/_test/unplayable-next' && TEST_HOOKS) {
