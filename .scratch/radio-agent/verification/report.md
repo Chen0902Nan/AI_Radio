@@ -98,13 +98,15 @@
 
 ```
 server/netease.js      接入层：扫码登录、资料读取、音源解析与分类、地址缓存
-server/index.js        HTTP 服务：静态页 + JSON API + /api/audio/:id 音频转发（含 Range）
-public/                最小播放器：歌曲信息、播放/暂停、下一首、状态提示、红心与歌单列表
+server/codex.js        Codex 选歌适配层：codex exec 子进程、结构化输出、结果校验、超时处理
+server/index.js        HTTP 服务：静态页 + JSON API + /api/audio/:id 音频转发（含 Range）+ /api/plan
+public/                最小播放器：歌曲信息、播放/暂停、下一首、状态提示、红心与歌单列表、Codex 选歌
 scripts/read-library.mjs     资料读取与分页/去重检查（输出不含凭据的报告，失败时非零退出）
 scripts/lib/library-checks.mjs  资料报告的判定逻辑（单独抽出以便测试）
 scripts/verify-playback.mjs  真实浏览器播放与故障恢复验证
-scripts/verify-fixes.mjs     针对代码审查三处缺陷的回归验证（含敏感性验证）
-data/                  登录会话（已 gitignore，权限 0600）
+scripts/verify-fixes.mjs     针对代码审查缺陷的回归验证（含敏感性验证）
+scripts/verify-codex.mjs     Codex 选歌验证（真实调用、结果校验、失败续播）
+data/                  登录会话与临时文件（已 gitignore，权限 0600）
 ```
 
 ```bash
@@ -113,8 +115,9 @@ npm start                       # 正常启动，http://127.0.0.1:8787
 node scripts/read-library.mjs   # 读取真实资料（需已登录），失败时退出码非零
 # 验证用（带故障注入）：
 npm run start:test              # RADIO_TEST_HOOKS=1 node server/index.js
-npm run verify:playback         # 真实浏览器验证（约 5~6 分钟，含一首完整歌曲）
-npm run verify:fixes            # 三处缺陷的回归验证（约 1 分钟）
+npm run verify:playback         # 真实浏览器播放验证（约 5~6 分钟）
+npm run verify:fixes            # 播放控制/缓存/退出码回归（约 2 分钟）
+npm run verify:codex            # Codex 选歌验证（约 3 分钟，含一次真实 Codex 调用）
 ```
 
 登录：浏览器打开 `http://127.0.0.1:8787/login`，用手机网易云音乐 App 扫码。二维码只在本机使用。
@@ -192,3 +195,72 @@ npm run verify:fixes            # 三处缺陷的回归验证（约 1 分钟）
 - `npm run read-library`：退出码 0，`failures: []`、`ok: true`
 - `npm run verify:playback`：14 通过 / 0 失败 / 0 跳过
 - `npm run verify:fixes`：18 通过 / 0 失败
+
+---
+
+## 8. Codex 选歌最小验证
+
+证据文件：`.scratch/radio-agent/verification/artifacts/codex-plan.json`（13 项检查全通过）
+
+### 接入方式
+
+| 项 | 值 |
+| --- | --- |
+| CLI | `codex-cli 0.153.4`（/Applications/ChatGPT.app/Contents/Resources/codex） |
+| 认证 | 复用本机已登录的 ChatGPT/Codex 订阅，未使用 API key |
+| 调用参数 | `codex exec -C <空目录> --skip-git-repo-check --sandbox read-only --ephemeral --ignore-user-config --color never --output-schema <schema> -o <out> <prompt>` |
+| 结构化输出 | JSON Schema 约束 `{picks:[{id,reason}]}`，从 `-o` 读最终消息，不解析事件流 |
+| 默认超时 | 90s，超时直接 SIGKILL 子进程 |
+
+参数选择上的实测对比：不加 `--ignore-user-config` 时会加载用户的 skills 上下文（约 2.7 万 token 且有截断警告）；加上之后降到约 2.1～2.3 万 token，认证不受影响（认证走 CODEX_HOME，与 config.toml 无关）。**每次调用约 2 万 token**，这是订阅额度上的实际开销，接入编排层时需要控制调用频率。
+
+### 真实调用结果
+
+- 单次调用：exit code 0，耗时 12.4～13.1s，22,711 tokens（含提示词中的 60 首候选）。
+- 输入：从 456 首红心歌曲随机抽 60 首作候选，加一句收听场景描述。
+- 输出示例（“深夜安静、适合一个人听”）：
+
+| 歌曲 | 选歌理由 | 可播性 |
+| --- | --- | --- |
+| 喜欢 — 陈奕迅 | 轻柔而亲密，适合让一天的喧闹慢慢退去。 | 完整 |
+| 红豆 — 王菲 | 细腻悠缓，让独处时的思念有处安放。 | 完整 |
+| 绵绵 — 陈奕迅 | 低回的情绪适合夜深时独自回望往事。 | 完整 |
+| 寻人启事 — 徐佳莹 | 留白与倾诉感交织，适合安静听见自己的心事。 | 完整 |
+| 儿歌 — 张悬 | 朴素温柔，给深夜的独处一个安心的收尾。 | 完整 |
+
+### 结果校验（模型输出当不可信输入）
+
+- **id 必须在候选集里**：编造的 id 直接丢弃并记录原因。
+- **不能重复、必须有理由**：缺理由或重复的条目丢弃。
+- **可播性二次校验**：模型给的 id 只是候选，进入队列前逐个用真实账号查音源，不可完整播放的降级丢弃；全部不可播则整体回退。
+- **部分非法时保留合法部分**：实测注入“编造 id + 真实 id”混合输出，返回 `ok:true` 且 `kept=2、rejected=2`，被拒项都带原因。
+- **全部非法**：判为 `invalid_output`，不进入队列。
+
+### 浏览器验证
+
+- Codex 选歌接入队列时**没有打断正在播放的歌曲**：接入前后 `currentId` 不变、仍处于播放状态。
+- 队列结构：原曲留在队首，Codex 选出的 5 首接在其后。
+- 界面上逐首显示中文选歌理由，队列里的曲目带 Codex 标记。
+- 点 Codex 选出的第一首（`喜欢` — 陈奕迅，id 326719，时长 279.93s）**在网页里真实播放**。
+
+### 失败续播
+
+三种失败都通过测试注入制造，并对**同一个固定基线**断言（避免前一个用例破坏状态后，后面的“未变化”变成空过）：
+
+| 失败类型 | 结果 |
+| --- | --- |
+| timeout | 队列与选歌结果均未变化、当前曲目未变、仍在播放（进度继续推进 2.81s），界面显示“继续使用原队列，播放不受影响” |
+| quota | 同上 |
+| invalid_output | 同上，提示具体是“2 条全部不合法” |
+
+### 敏感性验证
+
+把两处临时改坏：(a) 失败分支里清空队列；(b) 去掉“id 必须在候选集里”的校验。结果：校验逻辑自检、部分非法处理、以及三种失败续播共 5 项检查全部稳定失败；恢复后 13 项全通过。
+
+### 未验证 / 限制
+
+- 只验证了“红心歌曲内部选歌”，规格中的 70/30 探索比例、喜好反馈权重、避免短时重复都未实现。
+- 未接 DJ 串场、天气、日历、每日调度。
+- 真实超时/额度不足未从真实 Codex 侧触发（会消耗订阅额度或需要等真实限流），用的是可控注入；真实的 codex 失败分类（退出码与 stderr 文本）只做了代码实现，未用真实失败样本验证。
+- 选歌质量没有量化评估，只有单次样本的目视合理性。
+- 每次约 2 万 token，未做长时高频调用的额度影响评估。

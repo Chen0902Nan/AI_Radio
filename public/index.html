@@ -38,6 +38,21 @@
         <div class="status" id="status">先登录并读取资料，然后点击播放。</div>
       </section>
 
+      <section class="codex">
+        <div class="lib-head">
+          <h2>Codex 选歌</h2>
+          <button id="clearPlan" class="ghost">清除 Codex 队列</button>
+        </div>
+        <div class="codex-row">
+          <input id="brief" placeholder="想听什么场景？例如：深夜安静、适合一个人听" />
+          <button id="plan" class="primary">让 Codex 选歌</button>
+        </div>
+        <div class="status" id="codexStatus">
+          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。
+        </div>
+        <div id="codexPicks" class="picks"></div>
+      </section>
+
       <section class="library">
         <div class="lib-head">
           <h2>音乐资料</h2>

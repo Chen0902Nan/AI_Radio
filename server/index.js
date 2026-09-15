@@ -9,6 +9,7 @@ const fs = require('fs')
 const path = require('path')
 const { URL } = require('url')
 const ncm = require('./netease')
+const codex = require('./codex')
 
 const PORT = Number(process.env.PORT || 8787)
 const HOST = process.env.HOST || '127.0.0.1'
@@ -147,6 +148,31 @@ async function streamAudio(req, res, id) {
   res.end()
 }
 
+/* ---------- 曲库缓存与候选抽样 ---------- */
+
+const libraryCache = new Map() // identity -> { at, tracks }
+const LIBRARY_TTL_MS = 5 * 60 * 1000
+
+async function getLikedTracksCached(session) {
+  const key = ncm.currentIdentity()
+  const hit = libraryCache.get(key)
+  if (hit && Date.now() - hit.at < LIBRARY_TTL_MS) return hit.tracks
+  const ids = await ncm.getLikedIds(session.cookie)
+  const tracks = await ncm.getLikedTracks(session.cookie, ids)
+  libraryCache.set(key, { at: Date.now(), tracks })
+  return tracks
+}
+
+/** 从真实红心歌曲里随机抽一批做候选，避免把 456 首全部塞进提示词。 */
+function sampleCandidates(tracks, n) {
+  const pool = tracks.slice()
+  for (let i = pool.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[pool[i], pool[j]] = [pool[j], pool[i]]
+  }
+  return pool.slice(0, Math.max(1, Math.min(n, pool.length)))
+}
+
 /* ---------- 路由 ---------- */
 
 const server = http.createServer(async (req, res) => {
@@ -261,6 +287,72 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req)
       const pending = ncm.setInjectedUnplayable(Number(body.count ?? 1))
       return sendJson(res, 200, { ok: true, pendingUnplayable: pending })
+    }
+
+    if (p === '/api/plan' && req.method === 'POST') {
+      const body = await readBody(req)
+      const session = ncm.loadSession()
+      if (!session) return sendJson(res, 401, { ok: false, code: 'NOT_LOGGED_IN', message: '未登录' })
+
+      const library = await getLikedTracksCached(session)
+      const candidates = sampleCandidates(library, Number(body.candidateCount) || 60)
+      const result = await codex.pickTracks({
+        candidates,
+        brief: typeof body.brief === 'string' ? body.brief.slice(0, 200) : '',
+        count: Number(body.count) || 5,
+        timeoutMs: Number(body.timeoutMs) || undefined,
+      })
+
+      // Codex 失败：不抛错，让前端明确知道要沿用原队列
+      if (!result.ok) {
+        return sendJson(res, 502, {
+          ok: false,
+          code: result.code,
+          message: result.message,
+          rejected: result.rejected || [],
+          meta: { ...result.meta, candidateIds: candidates.map((c) => c.id) },
+        })
+      }
+
+      // 模型给的 id 只算候选，必须再过一遍账号可播性才允许进入队列
+      const checked = []
+      for (const pick of result.picks) {
+        let playable = false
+        let kind = 'error'
+        try {
+          const info = await ncm.resolveTrack(pick.id)
+          kind = info.kind
+          playable = info.kind === 'full'
+        } catch (_) {
+          kind = 'error'
+        }
+        checked.push({ ...pick, kind, playable })
+      }
+      const playable = checked.filter((c) => c.playable)
+      if (!playable.length) {
+        return sendJson(res, 502, {
+          ok: false,
+          code: 'no_playable',
+          message: 'Codex 选出的曲目当前都不可完整播放，继续使用原队列',
+          rejected: result.rejected || [],
+          picks: checked,
+          meta: { ...result.meta, candidateIds: candidates.map((c) => c.id) },
+        })
+      }
+
+      return sendJson(res, 200, {
+        ok: true,
+        picks: playable,
+        dropped: checked.filter((c) => !c.playable),
+        rejected: result.rejected || [],
+        meta: { ...result.meta, candidateIds: candidates.map((c) => c.id) },
+      })
+    }
+
+    if (p === '/api/_test/codex-mode' && TEST_HOOKS) {
+      const body = await readBody(req)
+      const mode = codex.setCodexMode(body.mode)
+      return sendJson(res, 200, { ok: true, mode })
     }
 
     if (p === '/api/logout') {

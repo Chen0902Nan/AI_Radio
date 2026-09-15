@@ -75,6 +75,28 @@ button.ghost { background: transparent; font-size: 13px; padding: 5px 12px; }
 .status.bad { color: var(--bad); border-color: var(--bad); }
 
 .library { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+
+.codex { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin-bottom: 22px; }
+.codex-row { display: flex; gap: 10px; margin-bottom: 12px; }
+.codex-row input {
+  flex: 1; font: inherit; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px;
+}
+.codex-row input::placeholder { color: #6f7688; }
+.picks { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.pick {
+  display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: baseline;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; cursor: pointer;
+}
+.pick:hover { background: var(--panel-2); }
+.pidx { color: #616879; font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+.pbody { min-width: 0; }
+.pname { display: block; font-size: 13px; }
+.preason { display: block; color: var(--dim); font-size: 12px; margin-top: 2px; }
+.track.codex .tn::after {
+  content: 'Codex'; margin-left: 8px; font-size: 10px; color: var(--accent);
+  border: 1px solid var(--accent); border-radius: 999px; padding: 0 6px;
+}
 .lib-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .lib-body { display: grid; grid-template-columns: 210px 1fr; gap: 18px; }
 

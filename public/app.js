@@ -18,6 +18,11 @@ const el = {
   playlists: document.getElementById('playlists'),
   tracks: document.getElementById('tracks'),
   reload: document.getElementById('reload'),
+  brief: document.getElementById('brief'),
+  plan: document.getElementById('plan'),
+  clearPlan: document.getElementById('clearPlan'),
+  codexStatus: document.getElementById('codexStatus'),
+  codexPicks: document.getElementById('codexPicks'),
 }
 
 const MAX_CONSECUTIVE_FAILURES = 3
@@ -36,6 +41,7 @@ const state = {
   failedIds: new Set(),
   stopped: false,
   resolving: false,
+  codexPicks: [],
   attempts: 0, // 解析尝试总次数，用于验证没有快速重试
 }
 
@@ -71,6 +77,10 @@ window.__radio = {
       lastError: state.lastError,
       status: el.status.textContent,
       statusClass: el.status.className,
+      codexPicks: state.codexPicks.map((p) => ({ id: p.id, name: p.name, reason: p.reason })),
+      queueIds: state.queue.map((t) => t.id),
+      codexStatus: el.codexStatus.textContent,
+      codexStatusClass: el.codexStatus.className,
     }
   },
 }
@@ -183,8 +193,10 @@ function renderTracks() {
 
 function markCurrent() {
   document.querySelectorAll('.track').forEach((row) => {
-    row.classList.toggle('current', state.current && Number(row.dataset.id) === state.current.id)
-    row.classList.toggle('failed', state.failedIds.has(Number(row.dataset.id)))
+    const id = Number(row.dataset.id)
+    row.classList.toggle('current', state.current && id === state.current.id)
+    row.classList.toggle('failed', state.failedIds.has(id))
+    row.classList.toggle('codex', state.codexPicks.some((p) => p.id === id))
   })
 }
 
@@ -448,6 +460,86 @@ el.play.onclick = async () => {
 
 el.next.onclick = () => next({ userGesture: true })
 el.reload.onclick = loadLibrary
+
+/* ---------- Codex 选歌 ---------- */
+
+function setCodexStatus(text, cls = '') {
+  el.codexStatus.textContent = text
+  el.codexStatus.className = 'status' + (cls ? ' ' + cls : '')
+}
+
+function renderCodexPicks(picks) {
+  el.codexPicks.innerHTML = ''
+  picks.forEach((p, i) => {
+    const row = document.createElement('div')
+    row.className = 'pick'
+    row.innerHTML =
+      `<span class="pidx">${i + 1}</span>` +
+      `<span class="pbody"><span class="pname">${escapeHtml(p.name)} — ${escapeHtml(p.artists || '')}</span>` +
+      `<span class="preason">${escapeHtml(p.reason || '')}</span></span>`
+    row.onclick = () => {
+      const qi = state.queue.findIndex((t) => t.id === p.id)
+      if (qi >= 0) playIndex(qi, { userGesture: true })
+    }
+    el.codexPicks.appendChild(row)
+  })
+}
+
+/** 把 Codex 选出的歌接到当前播放之后；不打断正在响的那首。 */
+function applyCodexQueue(data) {
+  const picks = data.picks.map((p) => ({ ...p, fromCodex: true }))
+  const current = state.current
+  state.queue = current ? [current, ...picks] : picks
+  state.index = current ? 0 : -1
+  state.codexPicks = picks
+  state.sourceLabel = 'Codex 选歌'
+  state.stopped = false
+  state.consecutiveFailures = 0
+  renderTracks()
+  renderCodexPicks(picks)
+  updateControls()
+  el.counter.textContent = `${current ? 1 : 0} / ${state.queue.length} · ${state.sourceLabel}`
+}
+
+async function requestPlan() {
+  el.plan.disabled = true
+  setCodexStatus('Codex 正在选歌…（可能要十几秒）')
+  try {
+    const res = await fetch('/api/plan', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ brief: el.brief.value.trim(), count: 5 }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || !data.ok) {
+      const err = new Error(data.message || `HTTP ${res.status}`)
+      err.code = data.code || 'error'
+      throw err
+    }
+    applyCodexQueue(data)
+    const secs = data.meta && data.meta.durationMs ? (data.meta.durationMs / 1000).toFixed(1) : '?'
+    setCodexStatus(
+      `Codex 选出 ${data.picks.length} 首，已接在当前播放之后（用时 ${secs}s）。点下面任意一首可直接播放。`,
+      'ok',
+    )
+  } catch (err) {
+    // 失败时什么都不改：原队列继续播，只是把原因说清楚
+    setCodexStatus(
+      `Codex 选歌失败（${err.code}）：${err.message}。继续使用原队列，播放不受影响。`,
+      'bad',
+    )
+  } finally {
+    el.plan.disabled = false
+  }
+}
+
+el.plan.onclick = requestPlan
+el.clearPlan.onclick = () => {
+  state.codexPicks = []
+  renderCodexPicks([])
+  setCodexStatus('已清除 Codex 队列标记（当前队列未改动）。')
+  markCurrent()
+}
 
 loadLibrary()
 updateControls()

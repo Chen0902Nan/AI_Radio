@@ -444,6 +444,7 @@ module.exports = {
   resolveTrack,
   clearUrlCache,
   setInjectedUnplayable,
+  currentIdentity,
   normalizeTrack,
   DATA_DIR,
 }

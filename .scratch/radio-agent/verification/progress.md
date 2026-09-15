@@ -91,6 +91,17 @@
 
 最终回归：`read-library` 退出码 0（failures 为空）、`verify:playback` 14/14、`verify:fixes` 18/18。
 
+## Codex 选歌最小验证（2026-09-15）
+
+- 接入：本机 `codex-cli 0.153.4` 子进程，复用 ChatGPT 订阅；`--output-schema` 约束结构、`-o` 取最终消息、read-only 沙箱、空工作目录、`--ignore-user-config` 降上下文。
+- 真实调用：exit 0、12.4～13.1s、22,711 tokens（提示词含着 60 首候选）。
+- 结果校验：id 必须在候选集、不重复、有理由；部分非法只保留合法部分；全部非法判为 invalid_output；进队列前再用真实账号查一次可播性。
+- 浏览器：接入队列不打断当前播放，原曲留队首，Codex 选的歌接在后面，并能真实播放其中一首。
+- 失败续播：timeout / quota / invalid_output 三种注入下，队列与播放均不受影响。
+- 敏感性：把失败分支改成一清空队列、去掉 id 校验后，5 项检查稳定失败；恢复后 13/13 通过。
+
+详见 [report.md 第 8 节](report.md)。
+
 ## 记录
 
 - 详见 [../../integration-research.md](../integration-research.md) 的既有只读核查。
