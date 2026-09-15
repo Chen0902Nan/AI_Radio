@@ -11,7 +11,8 @@
     "start": "node server/index.js",
     "start:test": "RADIO_TEST_HOOKS=1 node server/index.js",
     "read-library": "node scripts/read-library.mjs",
-    "verify:playback": "node scripts/verify-playback.mjs"
+    "verify:playback": "node scripts/verify-playback.mjs",
+    "verify:fixes": "node scripts/verify-fixes.mjs"
   },
   "repository": {
     "type": "git",

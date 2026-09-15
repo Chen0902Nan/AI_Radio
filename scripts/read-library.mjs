@@ -6,12 +6,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+import { collectFailures } from './lib/library-checks.mjs'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ncm = require('../server/netease.js')
-
-const OUT_DIR = path.resolve(__dirname, '..', '.scratch/radio-agent/verification/artifacts')
+const OUT_DIR = process.env.RADIO_REPORT_OUT
+  ? path.resolve(process.env.RADIO_REPORT_OUT)
+  : path.resolve(__dirname, '..', '.scratch/radio-agent/verification/artifacts')
 fs.mkdirSync(OUT_DIR, { recursive: true })
 
 const redact = (s) => String(s).replace(/MUSIC_U=[^;]+/g, 'MUSIC_U=***')
@@ -34,8 +36,10 @@ async function main() {
   const session = ncm.loadSession()
   if (!session) {
     report.blocked = '未登录：data/session.json 不存在，请先扫码登录'
-    console.log(JSON.stringify(report, null, 2))
+    report.failures = collectFailures(report)
+    report.ok = false
     writeReport(report)
+    console.error(JSON.stringify(report, null, 2))
     process.exitCode = 2
     return
   }
@@ -160,10 +164,30 @@ async function main() {
     }
   }
   report.playability = { sampled: probe.length, distribution: dist, details }
-  report.steps.push({ step: 'playability', ok: true, ...dist })
+  report.steps.push({ step: 'playability', ok: dist.error === 0, error: dist.error ? `音源查询报错 ${dist.error} 首` : undefined })
 
+  finish(report)
+}
+
+/** 统一收口：把判定结果写进报告，并用退出码表达失败。 */
+function finish(report) {
+  report.failures = collectFailures(report)
+  report.ok = report.failures.length === 0
   writeReport(report)
-  console.log(JSON.stringify({ ...report, liked: { ...report.liked, samples: report.liked.samples } }, null, 2))
+  console.log(
+    JSON.stringify(
+      { ...report, liked: report.liked ? { ...report.liked, samples: report.liked.samples } : report.liked },
+      null,
+      2,
+    ),
+  )
+  if (!report.ok) {
+    console.error('\n资料读取未通过：')
+    for (const f of report.failures) console.error('  - ' + f)
+    process.exitCode = 1
+  } else {
+    console.log('\n资料读取检查全部通过。')
+  }
 }
 
 function writeReport(report) {

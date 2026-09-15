@@ -220,6 +220,7 @@ const server = http.createServer(async (req, res) => {
         code: kindCode,
         message: kindMessage,
         kind: info.kind,
+        identityKind: info.identity === 'anon' ? 'anon' : 'user',
         level: info.level,
         br: info.br,
         fee: info.fee,
@@ -238,6 +239,13 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req)
       injectResolveFailures = Number(body.count ?? 1)
       return sendJson(res, 200, { ok: true, pendingFailures: injectResolveFailures })
+    }
+
+    if (p === '/api/_test/unplayable-next' && TEST_HOOKS) {
+      // 模拟“刷新后确认该曲不可播放”，用于验证缓存失效路径（与上面的解析报错不同）
+      const body = await readBody(req)
+      const pending = ncm.setInjectedUnplayable(Number(body.count ?? 1))
+      return sendJson(res, 200, { ok: true, pendingUnplayable: pending })
     }
 
     if (p === '/api/logout') {

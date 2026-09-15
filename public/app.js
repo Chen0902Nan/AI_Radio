@@ -35,8 +35,15 @@ const state = {
   lastError: null,
   failedIds: new Set(),
   stopped: false,
+  resolving: false,
   attempts: 0, // 解析尝试总次数，用于验证没有快速重试
 }
+
+// 播放意图的代次号：每一次新的播放/暂停/切歌意图都自增，
+// 异步结果返回时如果代次已经变了，就说明它是过期结果，必须丢弃。
+let playToken = 0
+// 用户当前是否希望出声。加载中点暂停后，晚到的解析结果不能把播放重新拉起来。
+let userWantsPlayback = false
 
 // 给自动化验证读取的只读快照。
 window.__radio = {
@@ -56,6 +63,9 @@ window.__radio = {
       consecutiveFailures: state.consecutiveFailures,
       failureCount: state.failureCount,
       resolveAttempts: state.attempts,
+      resolving: state.resolving,
+      userWantsPlayback,
+      playToken,
       failedIds: [...state.failedIds],
       lastError: state.lastError,
       status: el.status.textContent,
@@ -181,7 +191,8 @@ function updateControls() {
   const has = state.queue.length > 0
   el.play.disabled = !has
   el.next.disabled = !has
-  el.play.textContent = state.started && !audio.paused ? '暂停' : '播放'
+  // 解析中也要显示“暂停”，否则用户没有入口取消正在进行的加载
+  el.play.textContent = state.resolving || (state.started && !audio.paused) ? '暂停' : '播放'
 }
 
 /* ---------- 播放核心 ---------- */
@@ -193,8 +204,9 @@ async function resolveTrack(id, force = false) {
   return { ok: res.ok, status: res.status, ...data }
 }
 
-async function playIndex(index, { userGesture = false, isAuto = false } = {}) {
+async function playIndex(index, { userGesture = false } = {}) {
   if (index < 0 || index >= state.queue.length) {
+    userWantsPlayback = false
     setStatus('没有更多可播放的歌曲。', 'warn')
     state.stopped = true
     updateControls()
@@ -205,6 +217,11 @@ async function playIndex(index, { userGesture = false, isAuto = false } = {}) {
     state.stopped = false
     state.consecutiveFailures = 0
   }
+
+  // 取一个代次号；并发切歌时只有最后一次意图对应的结果允许生效
+  const token = ++playToken
+  userWantsPlayback = true
+  state.resolving = true
 
   const track = state.queue[index]
   state.index = index
@@ -220,8 +237,17 @@ async function playIndex(index, { userGesture = false, isAuto = false } = {}) {
   try {
     r = await resolveTrack(track.id)
   } catch (err) {
+    if (token !== playToken) return
+    state.resolving = false
     return handleTrackFailure(track, '解析请求失败：' + err.message, index)
   }
+
+  // 解析期间用户又切了歌或点了暂停：丢弃过期结果，不碰播放器
+  if (token !== playToken || !userWantsPlayback) {
+    if (token === playToken) state.resolving = false
+    return
+  }
+  state.resolving = false
 
   if (!r.ok || !r.playable) {
     const reason =
@@ -236,7 +262,10 @@ async function playIndex(index, { userGesture = false, isAuto = false } = {}) {
   audio.src = r.audioUrl + '?t=' + Date.now()
   try {
     await audio.play()
+    // play() 等待期间又发生了切歌/暂停，别继续播
+    if (token !== playToken) audio.pause()
   } catch (err) {
+    if (token !== playToken) return
     // 浏览器拦截自动播放或加载失败：按单曲失败处理，交给统一换歌逻辑。
     handleTrackFailure(track, '浏览器拒绝播放：' + err.message, index)
   }
@@ -252,6 +281,7 @@ function showTrack(t) {
 function handleTrackFailure(track, reason, index) {
   // 切歌时旧音频还在响；解析失败必须停掉它，否则会出现“界面报失败但旧歌还在放”。
   audio.pause()
+  state.resolving = false
   state.failedIds.add(track.id)
   state.failureCount += 1
   state.lastError = { id: track.id, name: track.name, reason }
@@ -260,6 +290,7 @@ function handleTrackFailure(track, reason, index) {
 
   if (state.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
     state.stopped = true
+    userWantsPlayback = false
     setStatus(
       `连续 ${state.consecutiveFailures} 首无法播放，已停止自动换歌。最后一次原因：${reason}。请检查登录状态或稍后再试。`,
       'bad',
@@ -269,7 +300,8 @@ function handleTrackFailure(track, reason, index) {
   }
   setStatus(`「${track.name}」失败：${reason} → ${RETRY_DELAY_MS / 1000}s 后自动换下一首`, 'warn')
   setTimeout(() => {
-    if (!state.stopped) playIndex(index + 1, { isAuto: true })
+    // 用户在这段退避里点了暂停/停止，就不要把播放重新拉起来
+    if (!state.stopped && userWantsPlayback) playIndex(index + 1)
   }, RETRY_DELAY_MS)
 }
 
@@ -279,6 +311,7 @@ function next({ userGesture = false } = {}) {
   if (nextIndex >= state.queue.length) {
     setStatus('已到列表末尾。', 'warn')
     state.stopped = true
+    userWantsPlayback = false
     updateControls()
     return
   }
@@ -325,13 +358,16 @@ audio.addEventListener('error', () => {
 
 async function refreshCurrent() {
   const track = state.current
+  const token = playToken
   state.attempts += 1
   try {
     const r = await resolveTrack(track.id, true)
+    if (token !== playToken) return
     if (!r.ok || !r.playable) throw new Error(r.message || '刷新未取得可用地址')
     audio.src = r.audioUrl + '?t=' + Date.now()
     await audio.play()
   } catch (err) {
+    if (token !== playToken) return
     handleTrackFailure(track, '刷新地址失败：' + err.message, state.index)
   }
 }
@@ -347,19 +383,36 @@ audio.addEventListener('timeupdate', () => {
 
 audio.addEventListener('pause', updateControls)
 
+function pausePlayback() {
+  // 代次自增 = 作废所有在途解析请求；这是“加载中暂停”不被覆盖的关键
+  playToken += 1
+  userWantsPlayback = false
+  state.resolving = false
+  if (!audio.paused) audio.pause()
+  setStatus('已暂停。')
+  updateControls()
+}
+
 el.play.onclick = async () => {
-  if (!state.started || audio.paused) {
-    if (audio.src && audio.currentTime > 0 && audio.paused) {
-      await audio.play()
-      return
-    }
-    state.stopped = false
-    state.consecutiveFailures = 0
-    const from = state.index >= 0 ? state.index : 0
-    playIndex(from, { userGesture: true })
-  } else {
-    audio.pause()
+  // 正在解析（加载中）也允许暂停：这里必须取消在途请求，否则结果回来后会把播放重新拉起
+  if (state.resolving || (state.started && !audio.paused)) {
+    pausePlayback()
+    return
   }
+  if (audio.src && audio.currentTime > 0) {
+    playToken += 1
+    userWantsPlayback = true
+    try {
+      await audio.play()
+    } catch (err) {
+      setStatus('浏览器拒绝播放：' + err.message, 'bad')
+    }
+    updateControls()
+    return
+  }
+  state.stopped = false
+  state.consecutiveFailures = 0
+  playIndex(state.index >= 0 ? state.index : 0, { userGesture: true })
 }
 
 el.next.onclick = () => next({ userGesture: true })

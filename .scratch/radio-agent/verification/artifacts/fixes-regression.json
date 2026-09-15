@@ -1,0 +1,554 @@
+{
+  "at": "2026-09-15T03:25:09.971Z",
+  "base": "http://127.0.0.1:8787",
+  "checks": [
+    {
+      "name": "A 快速连续切歌后，播放器播的就是最后选中的那首（旧请求未覆盖）",
+      "ok": true,
+      "detail": {
+        "requestedIndex": 3,
+        "currentId": 25638273,
+        "currentTitle": "梦想天空分外蓝",
+        "audioSrcId": 25638273
+      }
+    },
+    {
+      "name": "A 切歌稳定后没有再次被旧结果改动",
+      "ok": true,
+      "detail": {
+        "currentIdAfter3_5s": 25638273,
+        "audioSrcIdAfter3_5s": 25638273
+      }
+    },
+    {
+      "name": "B 解析中按钮显示“暂停”，用户有取消入口",
+      "ok": true,
+      "detail": {
+        "resolving": true,
+        "buttonLabel": "暂停"
+      }
+    },
+    {
+      "name": "B 加载中点暂停后，迟到的解析结果不会把播放重新拉起来",
+      "ok": true,
+      "detail": {
+        "pausedAfter": true,
+        "lateTrackId": 489302317,
+        "audioSrcId": 25638273,
+        "userWantsPlayback": false,
+        "status": "已暂停。"
+      }
+    },
+    {
+      "name": "B 暂停后不会再自动播放",
+      "ok": true,
+      "detail": {
+        "userWantsPlayback": false,
+        "paused": true
+      }
+    },
+    {
+      "name": "C 前置：缓存已就绪（重复解析命中缓存）",
+      "ok": true,
+      "detail": {
+        "first": {
+          "status": 200,
+          "cached": true,
+          "kind": "full"
+        },
+        "second": {
+          "status": 200,
+          "cached": true,
+          "kind": "full"
+        }
+      }
+    },
+    {
+      "name": "C 强制刷新返回不可播放",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "kind": "none",
+        "code": "unplayable"
+      }
+    },
+    {
+      "name": "C 强制刷新确认不可播放后，旧缓存已被清除（不会拿旧地址顶替）",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "cached": false,
+        "kind": "full",
+        "note": "cached=true 说明命中了已经不成立的旧条目"
+      }
+    },
+    {
+      "name": "D 前置：登录态下第二次解析命中缓存",
+      "ok": true,
+      "detail": {
+        "first": {
+          "cached": true,
+          "identityKind": "user"
+        },
+        "second": {
+          "cached": true,
+          "identityKind": "user"
+        }
+      }
+    },
+    {
+      "name": "D 退出登录后不命中上一个身份的缓存",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "cached": false,
+        "identityKind": "anon",
+        "note": "cached=true 说明退出登录后仍在用登录态的旧地址"
+      }
+    },
+    {
+      "name": "D 会话已恢复，服务重新以登录态解析",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "identityKind": "user",
+        "cached": false
+      }
+    },
+    {
+      "name": "E 判定逻辑自检（合成输入）：异常报告都会被判为失败",
+      "ok": true,
+      "detail": {
+        "cases": 9,
+        "unexpected": []
+      }
+    },
+    {
+      "name": "E 资料读取脚本在失败时会以非零退出码结束（退出码能真的传出去）",
+      "ok": true,
+      "detail": {
+        "exitCode": 2
+      }
+    }
+  ],
+  "evidence": {
+    "fixA": {
+      "before": {
+        "currentId": 65536,
+        "currentTitle": "爱情转移",
+        "index": 0,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789442716159",
+        "paused": false,
+        "ended": false,
+        "currentTime": 2.763338,
+        "duration": 259.986667,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 0,
+        "resolveAttempts": 1,
+        "resolving": false,
+        "userWantsPlayback": true,
+        "playToken": 1,
+        "failedIds": [],
+        "lastError": null,
+        "status": "播放中：爱情转移 — 陈奕迅",
+        "statusClass": "status playing"
+      },
+      "queued": {
+        "currentId": 25638273,
+        "currentTitle": "梦想天空分外蓝",
+        "index": 3,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789442716159",
+        "paused": false,
+        "ended": false,
+        "currentTime": 3.042755,
+        "duration": 259.986667,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 0,
+        "resolveAttempts": 4,
+        "resolving": true,
+        "userWantsPlayback": true,
+        "playToken": 4,
+        "failedIds": [],
+        "lastError": null,
+        "status": "解析音源：梦想天空分外蓝…",
+        "statusClass": "status"
+      },
+      "after": {
+        "currentId": 25638273,
+        "currentTitle": "梦想天空分外蓝",
+        "index": 3,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789442719789",
+        "paused": false,
+        "ended": false,
+        "currentTime": 5.550252,
+        "duration": 198.613333,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 0,
+        "resolveAttempts": 4,
+        "resolving": false,
+        "userWantsPlayback": true,
+        "playToken": 4,
+        "failedIds": [],
+        "lastError": null,
+        "status": "播放中：梦想天空分外蓝 — 陈奕迅",
+        "statusClass": "status playing"
+      },
+      "settled": {
+        "currentId": 25638273,
+        "currentTitle": "梦想天空分外蓝",
+        "index": 3,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789442719789",
+        "paused": false,
+        "ended": false,
+        "currentTime": 9.050516,
+        "duration": 198.613333,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 0,
+        "resolveAttempts": 4,
+        "resolving": false,
+        "userWantsPlayback": true,
+        "playToken": 4,
+        "failedIds": [],
+        "lastError": null,
+        "status": "播放中：梦想天空分外蓝 — 陈奕迅",
+        "statusClass": "status playing"
+      },
+      "elapsedMs": 9783
+    },
+    "fixB": {
+      "before": {
+        "currentId": 25638273,
+        "currentTitle": "梦想天空分外蓝",
+        "index": 3,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789442719789",
+        "paused": false,
+        "ended": false,
+        "currentTime": 9.051636,
+        "duration": 198.613333,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 0,
+        "resolveAttempts": 4,
+        "resolving": false,
+        "userWantsPlayback": true,
+        "playToken": 4,
+        "failedIds": [],
+        "lastError": null,
+        "status": "播放中：梦想天空分外蓝 — 陈奕迅",
+        "statusClass": "status playing"
+      },
+      "during": {
+        "currentId": 489302317,
+        "currentTitle": "雀跃",
+        "index": 4,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789442719789",
+        "paused": false,
+        "ended": false,
+        "currentTime": 9.369437,
+        "duration": 198.613333,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 0,
+        "resolveAttempts": 5,
+        "resolving": true,
+        "userWantsPlayback": true,
+        "playToken": 5,
+        "failedIds": [],
+        "lastError": null,
+        "status": "解析音源：雀跃…",
+        "statusClass": "status"
+      },
+      "afterPause": {
+        "currentId": 489302317,
+        "currentTitle": "雀跃",
+        "index": 4,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789442719789",
+        "paused": true,
+        "ended": false,
+        "currentTime": 9.382953,
+        "duration": 198.613333,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 0,
+        "resolveAttempts": 5,
+        "resolving": false,
+        "userWantsPlayback": false,
+        "playToken": 6,
+        "failedIds": [],
+        "lastError": null,
+        "status": "已暂停。",
+        "statusClass": "status"
+      },
+      "afterLate": {
+        "currentId": 489302317,
+        "currentTitle": "雀跃",
+        "index": 4,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789442719789",
+        "paused": true,
+        "ended": false,
+        "currentTime": 9.382953,
+        "duration": 198.613333,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 0,
+        "resolveAttempts": 5,
+        "resolving": false,
+        "userWantsPlayback": false,
+        "playToken": 6,
+        "failedIds": [],
+        "lastError": null,
+        "status": "已暂停。",
+        "statusClass": "status"
+      }
+    },
+    "resolveTrace": [
+      {
+        "kind": "request",
+        "id": 65536,
+        "delayMs": 0,
+        "at": 0
+      },
+      {
+        "kind": "response",
+        "id": 65536,
+        "status": 200,
+        "at": 13
+      },
+      {
+        "kind": "request",
+        "id": 65538,
+        "delayMs": 1600,
+        "at": 3122
+      },
+      {
+        "kind": "request",
+        "id": 167937,
+        "delayMs": 800,
+        "at": 3255
+      },
+      {
+        "kind": "request",
+        "id": 25638273,
+        "delayMs": 0,
+        "at": 3388
+      },
+      {
+        "kind": "response",
+        "id": 25638273,
+        "status": 200,
+        "at": 3643
+      },
+      {
+        "kind": "response",
+        "id": 167937,
+        "status": 200,
+        "at": 4349
+      },
+      {
+        "kind": "response",
+        "id": 65538,
+        "status": 200,
+        "at": 5449
+      },
+      {
+        "kind": "request",
+        "id": 489302317,
+        "delayMs": 1800,
+        "at": 12906
+      },
+      {
+        "kind": "response",
+        "id": 489302317,
+        "status": 200,
+        "at": 14936
+      }
+    ],
+    "fixC": {
+      "r1": {
+        "status": 200,
+        "id": 65536,
+        "code": "ok",
+        "message": "",
+        "kind": "full",
+        "identityKind": "user",
+        "level": "exhigh",
+        "br": 320000,
+        "fee": 1,
+        "playable": true,
+        "cached": true,
+        "audioUrl": "/api/audio/65536"
+      },
+      "r2": {
+        "status": 200,
+        "id": 65536,
+        "code": "ok",
+        "message": "",
+        "kind": "full",
+        "identityKind": "user",
+        "level": "exhigh",
+        "br": 320000,
+        "fee": 1,
+        "playable": true,
+        "cached": true,
+        "audioUrl": "/api/audio/65536"
+      },
+      "r3": {
+        "status": 200,
+        "id": 65536,
+        "code": "unplayable",
+        "message": "账号当前无权播放该曲目（或已下架/地区限制）",
+        "kind": "none",
+        "identityKind": "user",
+        "level": null,
+        "br": 0,
+        "fee": -1,
+        "playable": false,
+        "cached": false,
+        "audioUrl": null
+      },
+      "r4": {
+        "status": 200,
+        "id": 65536,
+        "code": "ok",
+        "message": "",
+        "kind": "full",
+        "identityKind": "user",
+        "level": "exhigh",
+        "br": 320000,
+        "fee": 1,
+        "playable": true,
+        "cached": false,
+        "audioUrl": "/api/audio/65536"
+      }
+    },
+    "fixD": {
+      "loggedIn": {
+        "status": 200,
+        "id": 65536,
+        "code": "ok",
+        "message": "",
+        "kind": "full",
+        "identityKind": "user",
+        "level": "exhigh",
+        "br": 320000,
+        "fee": 1,
+        "playable": true,
+        "cached": true,
+        "audioUrl": "/api/audio/65536"
+      },
+      "afterLogout": {
+        "status": 200,
+        "id": 65536,
+        "code": "trial_only",
+        "message": "账号对该曲目只有试听片段权限，跳过",
+        "kind": "trial",
+        "identityKind": "anon",
+        "level": "standard",
+        "br": 128012,
+        "fee": 1,
+        "playable": false,
+        "cached": false,
+        "audioUrl": null
+      }
+    },
+    "fixE": {
+      "selfTest": [
+        {
+          "name": "干净报告不应报错",
+          "expectedMinFailures": 0,
+          "got": 0,
+          "failures": []
+        },
+        {
+          "name": "红心详情缺失",
+          "expectedMinFailures": 1,
+          "got": 1,
+          "failures": [
+            "红心歌曲详情缺失 3 首"
+          ]
+        },
+        {
+          "name": "红心 id 有重复",
+          "expectedMinFailures": 1,
+          "got": 1,
+          "failures": [
+            "红心 id 有重复：6 条 → 去重后 5"
+          ]
+        },
+        {
+          "name": "分页不一致",
+          "expectedMinFailures": 1,
+          "got": 1,
+          "failures": [
+            "歌单分页结果不一致（不同 pageSize 读出的集合不同）"
+          ]
+        },
+        {
+          "name": "歌单读取失败",
+          "expectedMinFailures": 1,
+          "got": 1,
+          "failures": [
+            "歌单 9「b」读取失败：code=500"
+          ]
+        },
+        {
+          "name": "歌单曲目不完整",
+          "expectedMinFailures": 1,
+          "got": 1,
+          "failures": [
+            "歌单 9「b」曲目不完整：1/5"
+          ]
+        },
+        {
+          "name": "音源查询报错",
+          "expectedMinFailures": 1,
+          "got": 1,
+          "failures": [
+            "音源查询报错 2 首"
+          ]
+        },
+        {
+          "name": "步骤失败",
+          "expectedMinFailures": 1,
+          "got": 1,
+          "failures": [
+            "步骤 liked 失败"
+          ]
+        },
+        {
+          "name": "未登录被阻塞",
+          "expectedMinFailures": 1,
+          "got": 1,
+          "failures": [
+            "被阻塞：未登录"
+          ]
+        }
+      ],
+      "note": "合成输入只用于验证断言逻辑本身；真实数据结论以 npm run read-library 的运行结果为准"
+    }
+  },
+  "summary": {
+    "passed": 13,
+    "failed": 0
+  }
+}

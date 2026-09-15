@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-14T11:33:02.131Z",
+  "at": "2026-09-15T03:26:03.288Z",
   "steps": [
     {
       "step": "session",
@@ -34,11 +34,7 @@
     },
     {
       "step": "playability",
-      "ok": true,
-      "full": 11,
-      "trial": 0,
-      "none": 1,
-      "error": 0
+      "ok": true
     }
   ],
   "account": {
@@ -504,5 +500,7 @@
         "level": "exhigh"
       }
     ]
-  }
+  },
+  "failures": [],
+  "ok": true
 }

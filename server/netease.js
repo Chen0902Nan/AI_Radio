@@ -10,6 +10,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
+const crypto = require('crypto')
 
 const api = require('@neteasecloudmusicapienhanced/api')
 const generateConfig = require('@neteasecloudmusicapienhanced/api/generateConfig')
@@ -107,11 +108,13 @@ function saveSession(cookie, profile) {
   }
   fs.writeFileSync(SESSION_FILE, JSON.stringify(data, null, 2), 'utf-8')
   fs.chmodSync(SESSION_FILE, 0o600)
+  clearUrlCache()
   return data
 }
 
 function clearSession() {
   if (fs.existsSync(SESSION_FILE)) fs.unlinkSync(SESSION_FILE)
+  clearUrlCache()
 }
 
 function requireSession() {
@@ -316,11 +319,39 @@ function normalizeTrack(s) {
 
 const urlCache = new Map()
 
-function cacheGet(id) {
-  const hit = urlCache.get(Number(id))
+/**
+ * 缓存必须绑定“是谁在听”：退出登录或换账号后不能复用上一个人的播放地址。
+ * 用 cookie 的截断哈希做身份标识，不保存也不外泄明文凭据。
+ */
+function currentIdentity() {
+  const session = loadSession()
+  if (!session) return 'anon'
+  return 'user:' + crypto.createHash('sha256').update(session.cookie).digest('hex').slice(0, 12)
+}
+
+function clearUrlCache() {
+  urlCache.clear()
+}
+
+// 测试专用：模拟“刷新后确认该曲不可播放”，用于验证缓存失效路径。
+// 只有 RADIO_TEST_HOOKS=1 时才生效。
+let injectedUnplayable = 0
+function setInjectedUnplayable(n) {
+  injectedUnplayable = Number(n) || 0
+  return injectedUnplayable
+}
+
+function cacheGet(id, identity) {
+  const key = Number(id)
+  const hit = urlCache.get(key)
   if (!hit) return null
+  if (hit.identity !== identity) {
+    // 身份不匹配（退出登录 / 换账号）：旧条目直接作废
+    urlCache.delete(key)
+    return null
+  }
   if (hit.expiresAt - Date.now() < 60_000) {
-    urlCache.delete(Number(id))
+    urlCache.delete(key)
     return null
   }
   return hit
@@ -334,10 +365,7 @@ function cacheGet(id) {
  */
 async function resolveTrack(id, { force = false } = {}) {
   const key = Number(id)
-  if (!force) {
-    const cached = cacheGet(key)
-    if (cached) return { ...cached, cached: true }
-  }
+  // 先确定身份，再决定能不能命中缓存：
   // 正常情况下必须已登录；只有在开启测试注入时才允许游客态解析，
   // 用于在拿到本人资料前验证播放链路本身。游客态同样受网易权限限制。
   const session = loadSession()
@@ -346,27 +374,58 @@ async function resolveTrack(id, { force = false } = {}) {
     : process.env.RADIO_TEST_HOOKS === '1'
       ? ''
       : requireSession().cookie
-  const res = await api.song_url_v1({ id: key, level: 'exhigh', cookie })
-  if (res.body.code !== 200) {
-    throw new Error(`song_url_v1 失败 code=${res.body.code}`)
+  const identity = currentIdentity()
+
+  if (!force) {
+    const cached = cacheGet(key, identity)
+    if (cached) return { ...cached, cached: true }
   }
-  const d = (res.body.data || [])[0] || {}
-  const trial = d.freeTrialInfo && Object.keys(d.freeTrialInfo).length > 0
-  const kind = !d.url ? 'none' : trial ? 'trial' : 'full'
+
+  // 注入点只替换“上游返回了什么”，后面的分类与缓存处理必须和真实路径完全一致；
+  // 否则测试就变成自己验证自己，测不出缓存失效这类下游缺陷。
+  let upstream
+  if (process.env.RADIO_TEST_HOOKS === '1' && injectedUnplayable > 0) {
+    injectedUnplayable -= 1
+    upstream = {
+      injected: true,
+      url: null,
+      br: 0,
+      size: 0,
+      type: null,
+      level: null,
+      fee: -1,
+      freeTrialInfo: null,
+      expi: 0,
+    }
+  } else {
+    const res = await api.song_url_v1({ id: key, level: 'exhigh', cookie })
+    if (res.body.code !== 200) {
+      throw new Error(`song_url_v1 失败 code=${res.body.code}`)
+    }
+    upstream = (res.body.data || [])[0] || {}
+  }
+
+  const trial = upstream.freeTrialInfo && Object.keys(upstream.freeTrialInfo).length > 0
+  const kind = !upstream.url ? 'none' : trial ? 'trial' : 'full'
   const info = {
     id: key,
     kind,
-    url: d.url || null,
-    br: d.br || 0,
-    size: d.size || 0,
-    type: d.type || null,
-    level: d.level || null,
-    fee: d.fee,
-    freeTrialInfo: trial ? d.freeTrialInfo : null,
-    expiresAt: Date.now() + Math.max(0, (d.expi || 1200) - 30) * 1000,
+    identity,
+    injected: Boolean(upstream.injected),
+    url: upstream.url || null,
+    br: upstream.br || 0,
+    size: upstream.size || 0,
+    type: upstream.type || null,
+    level: upstream.level || null,
+    fee: upstream.fee,
+    freeTrialInfo: trial ? upstream.freeTrialInfo : null,
+    expiresAt: Date.now() + Math.max(0, (upstream.expi || 1200) - 30) * 1000,
     cached: false,
   }
+  // 地址有效则写入缓存；刷新后确认不可播放/无地址，必须把旧条目删掉，
+  // 否则下一次普通查询又会命中已经不成立的旧地址。
   if (info.url) urlCache.set(key, info)
+  else urlCache.delete(key)
   return info
 }
 
@@ -383,6 +442,8 @@ module.exports = {
   getUserPlaylists,
   getPlaylistTracks,
   resolveTrack,
+  clearUrlCache,
+  setInjectedUnplayable,
   normalizeTrack,
   DATA_DIR,
 }
