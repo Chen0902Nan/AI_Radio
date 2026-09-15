@@ -1,0 +1,35 @@
+{
+  "name": "ai_radio",
+  "version": "1.0.0",
+  "description": "个人电台（第一阶段：音乐链路与最小网页播放器）",
+  "main": "server/index.js",
+  "private": true,
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "start:test": "RADIO_TEST_HOOKS=1 node server/index.js",
+    "read-library": "node scripts/read-library.mjs",
+    "verify:playback": "node scripts/verify-playback.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Chen0902Nan/AI_Radio.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Chen0902Nan/AI_Radio/issues"
+  },
+  "homepage": "https://github.com/Chen0902Nan/AI_Radio#readme",
+  "dependencies": {
+    "@music163/ncm-cli": "^0.1.7",
+    "@neteasecloudmusicapienhanced/api": "^4.40.1"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.11.0"
+  }
+}

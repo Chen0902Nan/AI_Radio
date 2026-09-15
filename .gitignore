@@ -1,0 +1,5 @@
+node_modules/
+data/
+.scratch/radio-agent/verification/logs/
+.DS_Store
+*.log

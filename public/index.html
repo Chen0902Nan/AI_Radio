@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>个人电台 · 第一阶段验证</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="top">
+        <h1>个人电台<span class="tag">音乐链路验证</span></h1>
+        <div id="account" class="account">连接中…</div>
+      </header>
+
+      <section class="player">
+        <div class="now">
+          <div class="art" id="art">♪</div>
+          <div class="meta">
+            <div class="title" id="title">未在播放</div>
+            <div class="artist" id="artist">—</div>
+            <div class="album" id="album"></div>
+          </div>
+        </div>
+
+        <div class="progress">
+          <span id="elapsed">0:00</span>
+          <div class="bar"><div class="fill" id="fill"></div></div>
+          <span id="duration">0:00</span>
+        </div>
+
+        <div class="controls">
+          <button id="play" class="primary" disabled>播放</button>
+          <button id="next" disabled>下一首</button>
+          <span class="counter" id="counter"></span>
+        </div>
+
+        <div class="status" id="status">先登录并读取资料，然后点击播放。</div>
+      </section>
+
+      <section class="library">
+        <div class="lib-head">
+          <h2>音乐资料</h2>
+          <button id="reload" class="ghost">重新读取</button>
+        </div>
+        <div class="lib-body">
+          <aside class="lists">
+            <button class="list-item active" data-kind="liked" id="likedItem">
+              <span class="li-name">红心歌曲</span><span class="li-count" id="likedCount">—</span>
+            </button>
+            <div id="playlists" class="playlists"></div>
+          </aside>
+          <div class="tracks" id="tracks"></div>
+        </div>
+      </section>
+
+      <audio id="audio" preload="none"></audio>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

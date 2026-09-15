@@ -1,0 +1,783 @@
+{
+  "at": "2026-09-14T11:49:35.424Z",
+  "base": "http://127.0.0.1:8787",
+  "headless": true,
+  "checks": [
+    {
+      "name": "服务端在线并启用故障注入",
+      "ok": true,
+      "detail": {
+        "loggedIn": true,
+        "testHooks": true
+      }
+    },
+    {
+      "name": "页面加载后没有自动播放",
+      "ok": true,
+      "detail": {
+        "paused": true,
+        "src": ""
+      }
+    },
+    {
+      "name": "点击后真实播放第一首完整歌曲",
+      "ok": true,
+      "detail": {
+        "id": 65536,
+        "currentTime": 6.44,
+        "duration": 259.99,
+        "decodedBytes": 270628,
+        "networkState": 1
+      }
+    },
+    {
+      "name": "点击下一首切换到另一首可播歌曲",
+      "ok": true,
+      "detail": {
+        "from": 65536,
+        "to": 65538,
+        "title": "好久不见",
+        "currentTime": 1.22
+      }
+    },
+    {
+      "name": "单曲音源失败后自动换歌并恢复播放",
+      "ok": true,
+      "detail": {
+        "failedId": 167937,
+        "reason": "（测试注入）该曲目音源解析失败",
+        "resumedId": 25638273,
+        "resumedTitle": "梦想天空分外蓝"
+      }
+    },
+    {
+      "name": "失败后不是立即重试（有约 1.2s 退避）",
+      "ok": true,
+      "detail": {
+        "backoffMs": 1205
+      }
+    },
+    {
+      "name": "真实无权限曲目被明确标记为不可播放并跳过",
+      "ok": true,
+      "detail": {
+        "id": 108557,
+        "name": "残酷月光",
+        "artists": "林宥嘉",
+        "kind": "none",
+        "reason": "账号当前无播放权限"
+      }
+    },
+    {
+      "name": "无权限曲目之后继续播放可播曲目",
+      "ok": true,
+      "detail": {
+        "resumedId": 26584453,
+        "resumedTitle": "梦伴"
+      }
+    },
+    {
+      "name": "连续 3 首失败后停止自动换歌并说明原因",
+      "ok": true,
+      "detail": {
+        "status": "连续 3 首无法播放，已停止自动换歌。最后一次原因：（测试注入）该曲目音源解析失败。请检查登录状态或稍后再试。",
+        "consecutiveFailures": 3,
+        "newFailedIds": [
+          167937,
+          108557,
+          145424,
+          28403111,
+          521749251
+        ],
+        "stoppedAfterMs": 2462
+      }
+    },
+    {
+      "name": "停止后不再继续快速重试",
+      "ok": true,
+      "detail": {
+        "resolveAttemptsBefore": 6,
+        "resolveAttemptsAfter": 9,
+        "delta": 3,
+        "observeMs": 10462
+      }
+    },
+    {
+      "name": "完整歌曲从头自然播放到结束（未拖动进度）",
+      "ok": true,
+      "detail": {
+        "id": 65536,
+        "title": "爱情转移",
+        "durationSec": 260,
+        "playerReportedDurationSec": 260,
+        "endedAtSec": 259.99,
+        "wallClockSec": 260,
+        "monotonic": true,
+        "sampleCount": 174
+      }
+    },
+    {
+      "name": "播放耗时与真实时长一致（不是加速或跳段）",
+      "ok": true,
+      "detail": {
+        "wallClockSec": 260,
+        "durationSec": 260
+      }
+    },
+    {
+      "name": "播放器时长与曲目真实时长一致（完整歌曲，不是试听片段）",
+      "ok": true,
+      "detail": {
+        "playerReportedDurationSec": 260,
+        "libraryDurationSec": 260
+      }
+    },
+    {
+      "name": "自然结束后自动续播下一首",
+      "ok": true,
+      "detail": {
+        "nextId": 65538,
+        "nextTitle": "好久不见"
+      }
+    }
+  ],
+  "evidence": {
+    "account": {
+      "nickname": "Pluto_Magic",
+      "userId": 1734543760
+    },
+    "selectedTracks": [
+      {
+        "id": 65536,
+        "name": "爱情转移",
+        "artists": "陈奕迅",
+        "durationMs": 259986,
+        "level": "exhigh",
+        "br": 320000
+      },
+      {
+        "id": 65538,
+        "name": "好久不见",
+        "artists": "陈奕迅",
+        "durationMs": 250543,
+        "level": "exhigh",
+        "br": 320000
+      },
+      {
+        "id": 167937,
+        "name": "断桥残雪",
+        "artists": "许嵩",
+        "durationMs": 227160,
+        "level": "exhigh",
+        "br": 320000
+      },
+      {
+        "id": 25638273,
+        "name": "梦想天空分外蓝",
+        "artists": "陈奕迅",
+        "durationMs": 198613,
+        "level": "exhigh",
+        "br": 320000
+      },
+      {
+        "id": 489302317,
+        "name": "雀跃",
+        "artists": "任然 / 小来",
+        "durationMs": 235645,
+        "level": "exhigh",
+        "br": 320000
+      }
+    ],
+    "unplayableInFirst30": [
+      {
+        "id": 108557,
+        "name": "残酷月光",
+        "artists": "林宥嘉",
+        "kind": "none",
+        "code": "unplayable"
+      }
+    ],
+    "phase0": {
+      "paused": true,
+      "audioSrc": "",
+      "status": "已读取红心歌曲 456 首，收藏/自建歌单 6 个。"
+    },
+    "phase1": {
+      "currentId": 65536,
+      "currentTitle": "爱情转移",
+      "index": 0,
+      "queueLength": 456,
+      "started": true,
+      "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789386588441",
+      "paused": false,
+      "ended": false,
+      "currentTime": 6.44034,
+      "duration": 259.986667,
+      "readyState": 4,
+      "consecutiveFailures": 0,
+      "failureCount": 0,
+      "resolveAttempts": 1,
+      "failedIds": [],
+      "lastError": null,
+      "status": "播放中：爱情转移 — 陈奕迅",
+      "statusClass": "status playing",
+      "decoded": {
+        "webkitAudioDecodedByteCount": 270628,
+        "networkState": 1,
+        "errorCode": null
+      }
+    },
+    "phase2": {
+      "currentId": 65538,
+      "currentTitle": "好久不见",
+      "index": 1,
+      "queueLength": 456,
+      "started": true,
+      "audioSrc": "http://127.0.0.1:8787/api/audio/65538?t=1789386595557",
+      "paused": false,
+      "ended": false,
+      "currentTime": 1.224562,
+      "duration": 250.543311,
+      "readyState": 4,
+      "consecutiveFailures": 0,
+      "failureCount": 0,
+      "resolveAttempts": 2,
+      "failedIds": [],
+      "lastError": null,
+      "status": "播放中：好久不见 — 陈奕迅",
+      "statusClass": "status playing"
+    },
+    "phase3": {
+      "injectedTrackId": 167937,
+      "failedState": {
+        "id": 167937,
+        "name": "断桥残雪",
+        "reason": "（测试注入）该曲目音源解析失败"
+      },
+      "resumed": {
+        "currentId": 25638273,
+        "currentTitle": "梦想天空分外蓝",
+        "index": 3,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789386598303",
+        "paused": false,
+        "ended": false,
+        "currentTime": 1.316281,
+        "duration": 198.613333,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 1,
+        "resolveAttempts": 4,
+        "failedIds": [
+          167937
+        ],
+        "lastError": {
+          "id": 167937,
+          "name": "断桥残雪",
+          "reason": "（测试注入）该曲目音源解析失败"
+        },
+        "status": "播放中：梦想天空分外蓝 — 陈奕迅",
+        "statusClass": "status playing"
+      },
+      "backoffMs": 1205
+    },
+    "phase3b": {
+      "unplayable": {
+        "id": 108557,
+        "name": "残酷月光",
+        "artists": "林宥嘉",
+        "kind": "none",
+        "code": "unplayable"
+      },
+      "reason": "账号当前无播放权限",
+      "resumed": {
+        "currentId": 26584453,
+        "currentTitle": "梦伴",
+        "index": 7,
+        "queueLength": 456,
+        "started": true,
+        "audioSrc": "http://127.0.0.1:8787/api/audio/26584453?t=1789386601264",
+        "paused": false,
+        "ended": false,
+        "currentTime": 1.260766,
+        "duration": 247.444898,
+        "readyState": 4,
+        "consecutiveFailures": 0,
+        "failureCount": 2,
+        "resolveAttempts": 6,
+        "failedIds": [
+          167937,
+          108557
+        ],
+        "lastError": {
+          "id": 108557,
+          "name": "残酷月光",
+          "reason": "账号当前无播放权限"
+        },
+        "status": "播放中：梦伴 — 李悦君Ericaceae",
+        "statusClass": "status playing"
+      }
+    },
+    "phase4": {
+      "status": "连续 3 首无法播放，已停止自动换歌。最后一次原因：（测试注入）该曲目音源解析失败。请检查登录状态或稍后再试。",
+      "consecutiveFailures": 3,
+      "attemptsDelta": 3
+    },
+    "phase5": {
+      "track": {
+        "id": 65536,
+        "name": "爱情转移",
+        "artists": "陈奕迅",
+        "durationMs": 259986
+      },
+      "playerReportedDurationSec": 259.986667,
+      "samples": [
+        {
+          "t": 1,
+          "currentTime": 0.77,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 7520,
+          "currentTime": 8.29,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 15037,
+          "currentTime": 15.81,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 22561,
+          "currentTime": 23.33,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 30082,
+          "currentTime": 30.85,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 37601,
+          "currentTime": 38.37,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 45123,
+          "currentTime": 45.9,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 52643,
+          "currentTime": 53.41,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 60162,
+          "currentTime": 60.93,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 67681,
+          "currentTime": 68.45,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 75204,
+          "currentTime": 75.97,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 82722,
+          "currentTime": 83.49,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 90242,
+          "currentTime": 91.02,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 97764,
+          "currentTime": 98.54,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 105283,
+          "currentTime": 106.05,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 112799,
+          "currentTime": 113.57,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 120309,
+          "currentTime": 121.08,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 127820,
+          "currentTime": 128.6,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 135332,
+          "currentTime": 136.1,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 142843,
+          "currentTime": 143.61,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 150354,
+          "currentTime": 151.12,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 157864,
+          "currentTime": 158.64,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 165376,
+          "currentTime": 166.15,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 172888,
+          "currentTime": 173.66,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 180403,
+          "currentTime": 181.17,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 187918,
+          "currentTime": 188.69,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 195435,
+          "currentTime": 196.21,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 202949,
+          "currentTime": 203.72,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 210460,
+          "currentTime": 211.23,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 217972,
+          "currentTime": 218.74,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 225483,
+          "currentTime": 226.26,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 232995,
+          "currentTime": 233.77,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 240507,
+          "currentTime": 241.28,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 248018,
+          "currentTime": 248.79,
+          "paused": false,
+          "id": 65536
+        },
+        {
+          "t": 255527,
+          "currentTime": 256.3,
+          "paused": false,
+          "id": 65536
+        }
+      ],
+      "sampleCount": 174,
+      "endedEvent": {
+        "type": "ended",
+        "id": 65536,
+        "at": 1789386873415,
+        "currentTime": 259.986667,
+        "duration": 259.986667
+      },
+      "wallClockSec": 260.035,
+      "monotonic": true
+    },
+    "phase6": {
+      "currentId": 65538,
+      "currentTitle": "好久不见",
+      "index": 1,
+      "queueLength": 456,
+      "started": true,
+      "audioSrc": "http://127.0.0.1:8787/api/audio/65538?t=1789386873422",
+      "paused": false,
+      "ended": false,
+      "currentTime": 0.614453,
+      "duration": 250.543311,
+      "readyState": 4,
+      "consecutiveFailures": 0,
+      "failureCount": 5,
+      "resolveAttempts": 11,
+      "failedIds": [
+        167937,
+        108557,
+        145424,
+        28403111,
+        521749251
+      ],
+      "lastError": {
+        "id": 521749251,
+        "name": "言不由衷",
+        "reason": "（测试注入）该曲目音源解析失败"
+      },
+      "status": "播放中：好久不见 — 陈奕迅",
+      "statusClass": "status playing"
+    },
+    "networkTrace": [
+      {
+        "kind": "request",
+        "url": "/api/resolve/65536",
+        "at": 0
+      },
+      {
+        "kind": "response",
+        "url": "/api/resolve/65536",
+        "status": 200,
+        "at": 21
+      },
+      {
+        "kind": "request",
+        "url": "/api/audio/65536?t=1789386588441",
+        "at": 22
+      },
+      {
+        "kind": "response",
+        "url": "/api/audio/65536?t=1789386588441",
+        "status": 206,
+        "at": 322
+      },
+      {
+        "kind": "request",
+        "url": "/api/resolve/65538",
+        "at": 7122
+      },
+      {
+        "kind": "response",
+        "url": "/api/resolve/65538",
+        "status": 200,
+        "at": 7136
+      },
+      {
+        "kind": "request",
+        "url": "/api/audio/65538?t=1789386595557",
+        "at": 7138
+      },
+      {
+        "kind": "response",
+        "url": "/api/audio/65538?t=1789386595557",
+        "status": 206,
+        "at": 7308
+      },
+      {
+        "kind": "request",
+        "url": "/api/resolve/167937",
+        "at": 8657
+      },
+      {
+        "kind": "response",
+        "url": "/api/resolve/167937",
+        "status": 502,
+        "at": 8671
+      },
+      {
+        "kind": "request",
+        "url": "/api/resolve/25638273",
+        "at": 9876
+      },
+      {
+        "kind": "response",
+        "url": "/api/resolve/25638273",
+        "status": 200,
+        "at": 9883
+      },
+      {
+        "kind": "request",
+        "url": "/api/audio/25638273?t=1789386598303",
+        "at": 9889
+      },
+      {
+        "kind": "response",
+        "url": "/api/audio/25638273?t=1789386598303",
+        "status": 206,
+        "at": 9923
+      },
+      {
+        "kind": "request",
+        "url": "/api/resolve/108557",
+        "at": 11407
+      },
+      {
+        "kind": "response",
+        "url": "/api/resolve/108557",
+        "status": 200,
+        "at": 11637
+      },
+      {
+        "kind": "request",
+        "url": "/api/resolve/26584453",
+        "at": 12840
+      },
+      {
+        "kind": "response",
+        "url": "/api/resolve/26584453",
+        "status": 200,
+        "at": 12844
+      },
+      {
+        "kind": "request",
+        "url": "/api/audio/26584453?t=1789386601264",
+        "at": 12846
+      },
+      {
+        "kind": "response",
+        "url": "/api/audio/26584453?t=1789386601264",
+        "status": 206,
+        "at": 12974
+      },
+      {
+        "kind": "request",
+        "url": "/api/resolve/145424",
+        "at": 14357
+      },
+      {
+        "kind": "response",
+        "url": "/api/resolve/145424",
+        "status": 502,
+        "at": 14369
+      },
+      {
+        "kind": "request",
+        "url": "/api/resolve/28403111",
+        "at": 15573
+      },
+      {
+        "kind": "response",
+        "url": "/api/resolve/28403111",
+        "status": 502,
+        "at": 15576
+      },
+      {
+        "kind": "request",
+        "url": "/api/resolve/521749251",
+        "at": 16783
+      },
+      {
+        "kind": "response",
+        "url": "/api/resolve/521749251",
+        "status": 502,
+        "at": 16785
+      },
+      {
+        "kind": "request",
+        "url": "/api/resolve/65536",
+        "at": 24860
+      },
+      {
+        "kind": "response",
+        "url": "/api/resolve/65536",
+        "status": 200,
+        "at": 24868
+      },
+      {
+        "kind": "request",
+        "url": "/api/audio/65536?t=1789386613289",
+        "at": 24869
+      },
+      {
+        "kind": "response",
+        "url": "/api/audio/65536?t=1789386613289",
+        "status": 206,
+        "at": 24917
+      },
+      {
+        "kind": "request",
+        "url": "/api/resolve/65538",
+        "at": 284999
+      },
+      {
+        "kind": "response",
+        "url": "/api/resolve/65538",
+        "status": 200,
+        "at": 285011
+      },
+      {
+        "kind": "request",
+        "url": "/api/audio/65538?t=1789386873422",
+        "at": 285013
+      },
+      {
+        "kind": "response",
+        "url": "/api/audio/65538?t=1789386873422",
+        "status": 206,
+        "at": 285121
+      }
+    ]
+  },
+  "summary": {
+    "passed": 14,
+    "failed": 0,
+    "skipped": 0
+  }
+}
