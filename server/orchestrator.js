@@ -113,6 +113,9 @@ async function checkPlayable(items) {
 
 // 每个会话同一时刻最多一个在途生成任务：重复请求复用同一个 Promise，不会重复调 Codex。
 const inflight = new Map() // sessionId -> { epoch, promise, invalidated }
+// 在途请求的 epoch 水位：生成期间，比它旧的请求一律拒绝，
+// 避免迟到的旧请求把更新的编排意图取消掉再自己重跑一遍。
+const activeEpoch = new Map() // sessionId -> epoch
 // Codex 失败后的退避冷却，避免紧密重试和额度空转。
 const cooldowns = new Map() // sessionId -> { failures, until }
 
@@ -132,6 +135,7 @@ function invalidateSession(sessionId) {
   const entry = inflight.get(sessionId)
   if (entry) entry.invalidated = true
   inflight.delete(sessionId)
+  activeEpoch.delete(sessionId)
   cooldowns.delete(sessionId)
   return Boolean(entry)
 }
@@ -345,7 +349,8 @@ async function runPrepare(opts, entry) {
  *
  * 并发语义（对应「避免同时重复生成多批」与「新意图作废旧结果」）：
  *  - 同一 sessionId + 同一 epoch 的重复请求：复用同一个在途 Promise，不会重复调用。
- *  - 同一 sessionId + 更新的 epoch：旧任务标记作废，新任务立即开始。
+ *  - 同一 sessionId + 更大的 epoch：旧任务标记作废，新任务立即开始。
+ *  - 同一 sessionId + 更小的 epoch（乱序到达的旧请求）：直接拒绝，不影响在途的新任务。
  *  - 会话已结束：直接拒绝，不产生结果。
  */
 async function prepareBatch(opts = {}) {
@@ -362,10 +367,21 @@ async function prepareBatch(opts = {}) {
       const result = await existing.promise
       return { ...result, deduped: true }
     }
+    if (epoch < existing.epoch) {
+      // 过期请求（乱序到达的旧意图）：直接拒绝，
+      // 绝不能让它把更新的在途任务取消掉、再自己重跑一遍浪费订阅。
+      return {
+        ok: false,
+        code: 'superseded',
+        message: `补歌请求已过期（epoch ${epoch} 早于在途的 ${existing.epoch}），同一会话已有更新的编排意图在生成`,
+      }
+    }
+    // epoch 更大才是「新意图取代旧任务」
     existing.invalidated = true
     inflight.delete(sessionId)
   }
 
+  activeEpoch.set(sessionId, epoch)
   const entry = { epoch, invalidated: false, startedAt: Date.now() }
   const promise = runPrepare(opts, entry).catch((err) => ({
     ok: false,
@@ -377,7 +393,11 @@ async function prepareBatch(opts = {}) {
   try {
     return await promise
   } finally {
-    if (inflight.get(sessionId) === entry) inflight.delete(sessionId)
+    if (inflight.get(sessionId) === entry) {
+      inflight.delete(sessionId)
+      // 水位只在生成期间有效：结束后不阻塞后续请求（页面刷新后 epoch 会重新计时）
+      if (activeEpoch.get(sessionId) === epoch) activeEpoch.delete(sessionId)
+    }
   }
 }
 

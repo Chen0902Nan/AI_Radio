@@ -171,7 +171,10 @@ async function runControllerUnitChecks() {
       calls.push(req)
       return responder(req)
     },
-    onBatch: (picks) => batches.push(picks),
+    onBatch: (picks) => {
+      batches.push(picks)
+      return picks.length
+    },
     onStatus: (text, cls) => statuses.push({ text, cls }),
   })
 
@@ -272,6 +275,36 @@ async function runControllerUnitChecks() {
     batches: batches.length,
   })
 
+  // 本地取消后，尚未发出的请求不应该真的发往服务端
+  let lateCalls = 0
+  c.getContext = () => ({ sessionId: 's2', playing: true, stopped: false, pending: 0 })
+  responder = () => {
+    lateCalls += 1
+    return Promise.resolve({ ok: true, picks: [{ id: 505, type: 'track' }] })
+  }
+  c.check()
+  c.cancel('stopped', { reset: true }) // 在请求发出前就取消
+  await flush()
+  check('控制器：本地取消后，过期的补歌请求不会发往服务端', lateCalls === 0, { calls: lateCalls })
+
+  // 结果与待播全部重复（实际追加 0 首）：按失败处理，走退避
+  batches.length = 0
+  responder = () => Promise.resolve({ ok: true, picks: [{ id: 606, type: 'track' }, { id: 607, type: 'track' }] })
+  c.onBatch = () => 0 // 模拟前端把返回结果全部过滤掉
+  const attemptsBeforeDup = c.snapshot().attempts
+  c.check()
+  await flush()
+  const dupState = c.snapshot()
+  check('控制器：实际追加 0 首时按失败处理（退避重试，不假装补充成功）', dupState.attempts === attemptsBeforeDup + 1 && dupState.state === 'backoff' && batches.length === 0, {
+    attempts: dupState.attempts,
+    state: dupState.state,
+    batches: batches.length,
+  })
+  c.onBatch = (picks) => {
+    batches.push(picks)
+    return picks.length
+  }
+
   report.evidence.controllerUnit = { calls: calls.length, statuses }
 }
 
@@ -306,6 +339,21 @@ async function runServerChecks() {
   check('服务端：更新的编排意图会让旧补歌任务作废', r1.code === 'superseded' && r2.ok && (r2.picks || []).length > 0, {
     old: { status: r1.status, code: r1.code },
     next: { status: r2.status, picks: (r2.picks || []).length },
+  })
+  await post('/api/_test/codex-mode', { mode: 'success' })
+
+  // 乱序：迟到的旧请求不能取消更新的在途任务，也不能重复调 Codex
+  await post('/api/_test/codex-mode', { mode: 'slow', delayMs: 1200 })
+  await post('/api/_test/codex-stats?reset=1')
+  const newerFlight = post('/api/queue/refill', { sessionId: s.id, epoch: 200, excludeIds: [], count: 3 })
+  await sleep(300)
+  const staleReq = await post('/api/queue/refill', { sessionId: s.id, epoch: 100, excludeIds: [], count: 3 })
+  const newerResult = await newerFlight
+  const statsOrder = (await api('/api/_test/codex-stats')).stats
+  check('服务端：迟到的过期请求被拒绝，不取消更新的在途任务、也不重复调用', staleReq.ok === false && staleReq.code === 'superseded' && newerResult.ok === true && statsOrder.calls === 1, {
+    stale: { code: staleReq.code },
+    newer: { ok: newerResult.ok, picks: (newerResult.picks || []).length },
+    codexCalls: statsOrder.calls,
   })
   await post('/api/_test/codex-mode', { mode: 'success' })
 
@@ -482,39 +530,102 @@ async function runBrowserChecks(tracks) {
   const cfg = await page.evaluate(() => window.__radio.__test.config())
   check('网页：补歌参数来自本地设置（阈值/批量/退避）', cfg.threshold === 1 && cfg.batchSize === 3 && cfg.backoffBaseMs === 1000, cfg)
 
-  /* ---- 3.1 跨批续播：一批接一批，不因队列耗尽停止 ---- */
+  const t1 = tracks[0]
+  const t2 = tracks[1]
+
+  /* ---- 3.1 跨批续播：第一首自然播完，直接接上后台补充的一批 ---- */
   await post('/api/_test/codex-mode', { mode: 'success' })
-  const [t1, t2] = tracks
-  await startPlaying([t1.id, t2.id])
-  await waitFor(async () => (await state()).queueLength > 2, { timeout: 30000, label: '后台补充第一批' })
+  // 用曲库中最短的一首做自然播完，控制验证时长
+  const natural = tracks.slice().sort((a, b) => a.durationMs - b.durationMs)[0]
+  await setSettings({ refillThreshold: '1', refillBatchSize: '3' })
+  await page.evaluate(() => window.__radio.__test.setConfig({ threshold: 1, batchSize: 3 }))
+  await startPlaying([natural.id])
+  await waitFor(async () => (await state()).queueLength > 1, { timeout: 30000, label: '后台补充第一批' })
   const afterRefill = await state()
-  check('网页：后台补歌只追加，不打断正在播放的歌', afterRefill.currentId === t1.id && afterRefill.paused === false && afterRefill.autoQueueIds.length > 0, {
+  check('网页：后台补歌只追加，不打断正在播放的歌', afterRefill.currentId === natural.id && afterRefill.paused === false && afterRefill.autoQueueIds.length > 0, {
     currentId: afterRefill.currentId,
     queueLength: afterRefill.queueLength,
     autoQueueIds: afterRefill.autoQueueIds,
   })
   await page.screenshot({ path: path.join(OUT, 'shot-09-crossbatch-prep.png') })
 
-  // 第一批内结束 → 播第二批的下一首
+  // 不拖进度：等这首自然播完触发真实的 ended，跨批边界由此产生
+  await waitFor(
+    async () => {
+      const s = await state()
+      return s.autoQueueIds.includes(s.currentId) && !s.paused
+    },
+    { timeout: (natural.durationMs / 1000 + 90) * 1000, interval: 1000, label: '第一首自然播完并接入补歌批次' },
+  )
+  const cross = await state()
+  check('网页：第一首自然播完后自动接入后台补充的一批（没有因队列耗尽停止）', cross.autoQueueIds.includes(cross.currentId) && cross.paused === false && cross.stopped === false, {
+    currentId: cross.currentId,
+    naturalTrack: { id: natural.id, durationSec: +(natural.durationMs / 1000).toFixed(1) },
+    fromBatch: cross.autoQueueIds,
+    status: cross.status,
+  })
+  await page.screenshot({ path: path.join(OUT, 'shot-10-crossbatch-playing.png') })
+
+  /* ---- 3.1b 队列播完时等待后台批次，而不是停止 ---- */
+  await post('/api/_test/codex-mode', { mode: 'slow', delayMs: 4000 })
+  await startPlaying([natural.id])
+  await seekEnd() // 立刻把这首播完：此刻补歌还在路上
+  await waitFor(async () => (await state()).awaitingRefill === true, { timeout: 15000, interval: 200, label: '进入等待补歌状态' })
+  const waiting = await state()
+  await waitFor(
+    async () => {
+      const s = await state()
+      return s.autoQueueIds.includes(s.currentId) && !s.paused
+    },
+    { timeout: 20000, label: '批次到达后继续播放' },
+  )
+  const resumed = await state()
+  check('网页：队列播完时进入等待，批次到达后自动继续（不停止播放）', waiting.awaitingRefill === true && resumed.autoQueueIds.includes(resumed.currentId) && resumed.paused === false && resumed.stopped === false, {
+    waitingStatus: waiting.status,
+    resumedId: resumed.currentId,
+    fromBatch: resumed.autoQueueIds,
+  })
+
+  /* ---- 3.1c 已播过的歌可以再次被补入：完整队列播到底不停止 ---- */
+  await post('/api/_test/codex-mode', { mode: 'success' })
+  // 强制服务端返回第 1 首（此时它已是历史曲目）：验证不按整个历史队列去重
+  await post('/api/_test/refill-forced-picks', { ids: [tracks[0].id], count: 1 })
+  await page.evaluate(() => window.__radio.__test.setConfig({ threshold: 1, batchSize: 2 }))
+  await startPlaying([tracks[0].id, tracks[1].id, tracks[2].id])
+  // 切到第 2 首：第 1 首成为历史，待播只剩 1 首，触发补歌；强制服务端返回那首已播过的歌
+  await page.click('#next')
+  await waitFor(
+    async () => {
+      const s = await state()
+      return s.currentId === tracks[1].id && !s.paused && s.queueLength === 4
+    },
+    { timeout: 30000, label: '已播曲目被重新补入队列' },
+  )
+  const historyBack = await state()
+  check('网页：补歌返回已播过的歌曲时仍会追加（不按整个历史队列去重清零）', historyBack.queueLength === 4 && historyBack.autoQueueIds.includes(tracks[0].id) && historyBack.currentId === tracks[1].id, {
+    queueLength: historyBack.queueLength,
+    reAppended: historyBack.autoQueueIds,
+    currentId: historyBack.currentId,
+    prepStatus: historyBack.prepStatus,
+  })
+  // 把剩余待播播完，越过原队尾，继续播放重新补入的那首
   await seekEnd()
-  await waitFor(async () => (await state()).currentId === t2.id, { timeout: 20000, label: '第一首结束切到第二首' })
-  // 第二首结束 → 应该接上后台补进来的那一批（跨批）
+  await waitFor(async () => (await state()).currentId === tracks[2].id, { timeout: 20000, label: '切到第三首' })
   await seekEnd()
   await waitFor(
     async () => {
       const s = await state()
-      return s.autoQueueIds.includes(s.currentId) && !s.paused && s.currentTime > 0
+      return s.currentId === tracks[0].id && !s.paused
     },
-    { timeout: 25000, label: '跨批续播到后台补充的歌曲' },
+    { timeout: 20000, label: '越过原队尾继续播放' },
   )
-  const cross = await state()
-  check('网页：真实浏览器从一批衔接到后台补充的下一批，没有因队列耗尽停止', cross.autoQueueIds.includes(cross.currentId) && cross.paused === false && cross.stopped === false, {
-    currentId: cross.currentId,
-    fromBatch: cross.autoQueueIds,
-    queueLength: cross.queueLength,
-    status: cross.status,
+  const tail = await state()
+  check('网页：完整队列播到底后继续播放（不因队列耗尽停止）', tail.currentId === tracks[0].id && tail.paused === false && tail.stopped === false, {
+    currentId: tail.currentId,
+    queueLength: tail.queueLength,
+    status: tail.status,
   })
-  await page.screenshot({ path: path.join(OUT, 'shot-10-crossbatch-playing.png') })
+  await post('/api/_test/refill-forced-picks', { ids: [] })
 
   /* ---- 3.2 Codex 慢响应不阻塞已有音乐 ---- */
   await post('/api/_test/codex-mode', { mode: 'slow', delayMs: 4500 })
@@ -633,6 +744,21 @@ async function runBrowserChecks(tracks) {
     paused: degraded.paused,
   })
   await page.screenshot({ path: path.join(OUT, 'shot-12-degraded-continue.png') })
+  // 降级补入的歌曲要真的能播，而不只是追加进队列
+  await seekEnd()
+  await waitFor(
+    async () => {
+      const s = await state()
+      return s.autoQueueIds.includes(s.currentId) && !s.paused && s.currentTime > 0.5
+    },
+    { timeout: 20000, label: '播放降级补入的歌曲' },
+  )
+  const degradedPlay = await state()
+  check('网页：降级补入的歌曲能真实播放', degradedPlay.autoQueueIds.includes(degradedPlay.currentId) && degradedPlay.paused === false, {
+    currentId: degradedPlay.currentId,
+    fromDegradedBatch: degradedPlay.autoQueueIds,
+    currentTime: +degradedPlay.currentTime.toFixed(2),
+  })
 
   /* ---- 3.8 候选不足时清楚说明并停止自动重试 ---- */
   await post('/api/_test/codex-mode', { mode: 'success' })
@@ -717,6 +843,7 @@ main()
     try {
       await post('/api/_test/codex-mode', { mode: 'off' })
       await post('/api/_test/refill-forced', { count: 0 })
+      await post('/api/_test/refill-forced-picks', { ids: [] })
       await post('/api/_test/unplayable-next', { count: 0 })
       await post('/api/_test/resolve-error-next', { count: 0 })
     } catch (_) {}

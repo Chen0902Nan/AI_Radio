@@ -34,6 +34,7 @@
     network: '网络请求失败',
     internal_error: '服务内部错误',
     not_logged_in: '登录已失效',
+    no_new_tracks: '补歌结果与待播重复',
   }
   const labelFor = (code) => REASON_LABEL[code] || code || '未知原因'
 
@@ -50,7 +51,7 @@
       this.clearTimeout = opts.clearTimeout || ((t) => clearTimeout(t))
       this.config = { ...DEFAULTS, ...(opts.config || {}) }
 
-      this.epoch = 0
+      this.epoch = opts.initialEpoch !== undefined ? Number(opts.initialEpoch) || 0 : Date.now()
       this.inFlight = false
       this.attempts = 0
       this.nextRetryAt = 0
@@ -186,16 +187,22 @@
       const requestSessionId = ctx.sessionId
 
       Promise.resolve()
-        .then(() =>
-          this.requestBatch({
+        .then(() => {
+          // 本地已被取消/取代：不要把过期请求发出去，
+          // 否则服务端虽然会拒绝它，白出的请求也可能打扰同会话里更新的编排意图。
+          if (epoch !== this.epoch) return null
+          return this.requestBatch({
             epoch,
             excludeIds,
             brief: ctx.brief || '',
             pending: Number(ctx.pending) || 0,
             sessionId: requestSessionId,
-          }),
-        )
-        .then((res) => this.handleResult(epoch, res, requestSessionId))
+          })
+        })
+        .then((res) => {
+          if (res === null) return
+          this.handleResult(epoch, res, requestSessionId)
+        })
         .catch((err) =>
           this.handleResult(epoch, { ok: false, code: 'network', message: String((err && err.message) || err) }, requestSessionId),
         )
@@ -215,7 +222,26 @@
     handleResult(epoch, res, requestSessionId) {
       if (epoch !== this.epoch) return // 过期结果：直接丢弃，绝不落到队列上
       res = res || {}
+      if (res.code === 'superseded') {
+        this.state = 'idle'
+        return
+      }
       if (res.ok) {
+        const picks = Array.isArray(res.picks) ? res.picks : []
+        const added = this.onBatch(picks, res)
+        const addedCount = Array.isArray(added) ? added.length : Number(added)
+        if (picks.length === 0 || addedCount === 0) {
+          // 服务端说成功、但实际一首都没追加（例如与本地待播/失败曲目完全重复）：
+          // 必须按失败走退避，不能假装补充成功，更不能在这里跳到队尾继续播。
+          this.fail({
+            code: 'no_new_tracks',
+            message:
+              picks.length === 0
+                ? '补歌返回了空批次'
+                : `补歌返回的 ${picks.length} 首都与当前待播/失败曲目重复，实际追加 0 首`,
+          })
+          return
+        }
         this.attempts = 0
         this.nextRetryAt = 0
         this.state = 'idle'
@@ -223,11 +249,6 @@
         this.batches += 1
         this.lastBatchAt = this.now()
         if (res.degraded) this.degradedBatches += 1
-        this.onBatch(Array.isArray(res.picks) ? res.picks : [], res)
-        return
-      }
-      if (res.code === 'superseded') {
-        this.state = 'idle'
         return
       }
       if (res.code === 'session_ended') {

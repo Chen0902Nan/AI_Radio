@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-16T03:20:05.875Z",
+  "at": "2026-09-16T05:09:59.365Z",
   "base": "http://127.0.0.1:8787",
   "checks": [
     {
@@ -13,8 +13,8 @@
       "name": "开播建立会话；再次开播复用同一会话（不会重复建会话）",
       "ok": true,
       "detail": {
-        "first": "s_mu3j8vw2_yhqzzx",
-        "second": "s_mu3j8vw2_yhqzzx",
+        "first": "s_mu3n67gf_yn1cv1",
+        "second": "s_mu3n67gf_yn1cv1",
         "reused": true
       }
     },
@@ -31,7 +31,7 @@
       "name": "停止会结束会话",
       "ok": true,
       "detail": {
-        "id": "s_mu3j8vw2_yhqzzx"
+        "id": "s_mu3n67gf_yn1cv1"
       }
     },
     {
@@ -45,8 +45,8 @@
       "name": "停止后临时调整被清空，恢复个人默认",
       "ok": true,
       "detail": {
-        "oldId": "s_mu3j8vw2_yhqzzx",
-        "newId": "s_mu3j8vw7_19t13c",
+        "oldId": "s_mu3n67gf_yn1cv1",
+        "newId": "s_mu3n67gk_03m2eo",
         "adjustments": {}
       }
     },
@@ -119,7 +119,7 @@
       "detail": {
         "samplesPerRun": 20,
         "runs": 250,
-        "hitRateNeutral": 12,
+        "hitRateNeutral": 15,
         "hitRateDisliked": 0,
         "penalty": 0.0001
       }
@@ -128,8 +128,8 @@
       "name": "“喜欢”会提高该曲在选歌中的出现",
       "ok": true,
       "detail": {
-        "hitRateLiked": 37,
-        "hitRateNeutral": 12,
+        "hitRateLiked": 28,
+        "hitRateNeutral": 15,
         "boost": 4
       }
     },
@@ -146,7 +146,7 @@
       "name": "开播后建立会话并开始播放",
       "ok": true,
       "detail": {
-        "sessionId": "s_mu3j91x6_orctcw",
+        "sessionId": "s_mu3n6bj0_ro3yx7",
         "id": 65536,
         "button": "暂停"
       }
@@ -165,7 +165,7 @@
         "count": 7,
         "latest": {
           "track": 65536,
-          "session": "s_mu3j91x6_orctcw"
+          "session": "s_mu3n6bj0_ro3yx7"
         }
       }
     },
@@ -173,8 +173,8 @@
       "name": "页面刷新只是连回同一会话，不新建会话也不自动出声",
       "ok": true,
       "detail": {
-        "before": "s_mu3j91x6_orctcw",
-        "after": "s_mu3j91x6_orctcw",
+        "before": "s_mu3n6bj0_ro3yx7",
+        "after": "s_mu3n6bj0_ro3yx7",
         "paused": true,
         "openSessions": 1,
         "button": "继续"
@@ -239,24 +239,24 @@
   "evidence": {
     "session": {
       "first": {
-        "id": "s_mu3j8vw2_yhqzzx",
-        "started_at": 1789528806002,
+        "id": "s_mu3n67gf_yn1cv1",
+        "started_at": 1789535399487,
         "ended_at": null,
         "end_reason": null,
         "adjustments": {},
         "reused": false
       },
       "second": {
-        "id": "s_mu3j8vw2_yhqzzx",
-        "started_at": 1789528806002,
+        "id": "s_mu3n67gf_yn1cv1",
+        "started_at": 1789535399487,
         "ended_at": null,
         "end_reason": null,
         "adjustments": {},
         "reused": true
       },
       "afterStop": {
-        "id": "s_mu3j8vw7_19t13c",
-        "started_at": 1789528806007,
+        "id": "s_mu3n67gk_03m2eo",
+        "started_at": 1789535399492,
         "ended_at": null,
         "end_reason": null,
         "adjustments": {},
@@ -271,8 +271,8 @@
         "artists": "陈奕迅",
         "sentiment": "like",
         "source": "ui",
-        "session_id": "s_mu3j8vw7_19t13c",
-        "created_at": 1789528808384
+        "session_id": "s_mu3n67gk_03m2eo",
+        "created_at": 1789535401116
       },
       "dislike": {
         "id": 2,
@@ -281,8 +281,8 @@
         "artists": "陈奕迅",
         "sentiment": "dislike",
         "source": "ui",
-        "session_id": "s_mu3j8vw7_19t13c",
-        "created_at": 1789528808385
+        "session_id": "s_mu3n67gk_03m2eo",
+        "created_at": 1789535401118
       },
       "revoked": {
         "id": 2,
@@ -291,8 +291,8 @@
         "artists": "陈奕迅",
         "sentiment": "dislike",
         "source": "ui",
-        "session_id": "s_mu3j8vw7_19t13c",
-        "created_at": 1789528808385
+        "session_id": "s_mu3n67gk_03m2eo",
+        "created_at": 1789535401118
       },
       "history": [
         {
@@ -302,9 +302,9 @@
           "artists": "陈奕迅",
           "sentiment": "like",
           "source": "ui",
-          "session_id": "s_mu3j8vw7_19t13c",
-          "created_at": 1789528808384,
-          "revoked_at": 1789528808385
+          "session_id": "s_mu3n67gk_03m2eo",
+          "created_at": 1789535401116,
+          "revoked_at": 1789535401118
         },
         {
           "id": 2,
@@ -313,17 +313,17 @@
           "artists": "陈奕迅",
           "sentiment": "dislike",
           "source": "ui",
-          "session_id": "s_mu3j8vw7_19t13c",
-          "created_at": 1789528808385,
-          "revoked_at": 1789528808387
+          "session_id": "s_mu3n67gk_03m2eo",
+          "created_at": 1789535401118,
+          "revoked_at": 1789535401119
         }
       ]
     },
     "weighting": {
       "trackId": 65536,
-      "neutralHit": 12,
+      "neutralHit": 15,
       "dislikedHit": 0,
-      "likedHit": 37,
+      "likedHit": 28,
       "samplesPerRun": 20,
       "runs": 250
     },
@@ -822,7 +822,7 @@
         "awaitingRefill": false,
         "pending": 456,
         "refill": {
-          "epoch": 1,
+          "epoch": 1789535403108,
           "inFlight": false,
           "attempts": 0,
           "state": "idle",
@@ -847,12 +847,12 @@
         "index": 0,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789528813823",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789535404778",
         "loadedId": 65536,
         "paused": false,
         "ended": false,
         "stopped": false,
-        "currentTime": 1.875008,
+        "currentTime": 1.736715,
         "duration": 259.986667,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -1326,7 +1326,7 @@
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
         "codexStatusClass": "status",
-        "sessionId": "s_mu3j91x6_orctcw",
+        "sessionId": "s_mu3n6bj0_ro3yx7",
         "adjustments": {},
         "playId": 7,
         "feedback": {},
@@ -1335,7 +1335,7 @@
         "awaitingRefill": false,
         "pending": 455,
         "refill": {
-          "epoch": 1,
+          "epoch": 1789535403108,
           "inFlight": false,
           "attempts": 0,
           "state": "idle",
@@ -1839,7 +1839,7 @@
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
         "codexStatusClass": "status",
-        "sessionId": "s_mu3j91x6_orctcw",
+        "sessionId": "s_mu3n6bj0_ro3yx7",
         "adjustments": {},
         "playId": null,
         "feedback": {},
@@ -1848,7 +1848,7 @@
         "awaitingRefill": false,
         "pending": 456,
         "refill": {
-          "epoch": 1,
+          "epoch": 1789535406799,
           "inFlight": false,
           "attempts": 0,
           "state": "idle",
@@ -1873,12 +1873,12 @@
         "index": 0,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789528821139",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789535410858",
         "loadedId": 65536,
         "paused": true,
         "ended": false,
         "stopped": false,
-        "currentTime": 2.755935,
+        "currentTime": 2.847301,
         "duration": 259.986667,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -2361,7 +2361,7 @@
         "awaitingRefill": false,
         "pending": 455,
         "refill": {
-          "epoch": 2,
+          "epoch": 1789535406800,
           "inFlight": false,
           "attempts": 0,
           "state": "idle",

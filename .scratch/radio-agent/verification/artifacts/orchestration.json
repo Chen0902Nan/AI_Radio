@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-16T03:34:40.737Z",
+  "at": "2026-09-16T05:03:18.305Z",
   "base": "http://127.0.0.1:8792",
   "isolated": true,
   "checks": [
@@ -77,8 +77,8 @@
       "ok": true,
       "detail": {
         "lastBatch": 202,
-        "epochBefore": 0,
-        "epochAfter": 1
+        "epochBefore": 1789534999001,
+        "epochAfter": 1789534999002
       }
     },
     {
@@ -95,6 +95,22 @@
       "detail": {
         "calls": 2,
         "batches": 1
+      }
+    },
+    {
+      "name": "控制器：本地取消后，过期的补歌请求不会发往服务端",
+      "ok": true,
+      "detail": {
+        "calls": 0
+      }
+    },
+    {
+      "name": "控制器：实际追加 0 首时按失败处理（退避重试，不假装补充成功）",
+      "ok": true,
+      "detail": {
+        "attempts": 1,
+        "state": "backoff",
+        "batches": 0
       }
     },
     {
@@ -119,8 +135,22 @@
         },
         "next": {
           "status": 200,
-          "picks": 3
+          "picks": 4
         }
+      }
+    },
+    {
+      "name": "服务端：迟到的过期请求被拒绝，不取消更新的在途任务、也不重复调用",
+      "ok": true,
+      "detail": {
+        "stale": {
+          "code": "superseded"
+        },
+        "newer": {
+          "ok": true,
+          "picks": 3
+        },
+        "codexCalls": 1
       }
     },
     {
@@ -129,11 +159,11 @@
       "detail": {
         "excluded": 12,
         "picks": [
-          28563317,
-          417859631,
-          108242,
-          415792881,
-          567447039
+          1399533630,
+          25706279,
+          191060,
+          233882,
+          2608448649
         ]
       }
     },
@@ -156,9 +186,9 @@
       "detail": {
         "reason": "timeout",
         "picks": [
-          1482867143,
-          1989506149,
-          1937340367
+          541687281,
+          29715559,
+          29431061
         ]
       }
     },
@@ -209,27 +239,27 @@
       "name": "真实 Codex 补歌返回可播批次，并带真实 token 统计",
       "ok": true,
       "detail": {
-        "wallMs": 15328,
+        "wallMs": 14551,
         "picks": [
           {
-            "id": 209397,
-            "name": "太聪明",
-            "reason": "轻柔的吉他与低声絮语，让傍晚的心绪慢慢放松。"
+            "id": 471403427,
+            "name": "我喜欢上你时的内心活动",
+            "reason": "轻柔的吟唱像傍晚的微风，让心绪慢慢松下来。"
           },
           {
-            "id": 326719,
-            "name": "喜欢",
-            "reason": "温柔舒展的旋律，适合独处时静静听心事。"
+            "id": 569212211,
+            "name": "盛夏",
+            "reason": "温暖舒缓的旋律，适合独自静听，让回忆轻轻流淌。"
           },
           {
-            "id": 298838,
-            "name": "传奇",
-            "reason": "空灵歌声留下悠长余韵，为安静的傍晚收尾。"
+            "id": 25730757,
+            "name": "稳稳的幸福",
+            "reason": "用踏实温柔的歌声收尾，让独处的夜晚多一份安心。"
           }
         ],
         "meta": {
-          "durationMs": 13723,
-          "tokens": 22770,
+          "durationMs": 13875,
+          "tokens": 22833,
           "exitCode": 0
         }
       }
@@ -249,25 +279,64 @@
       "name": "网页：后台补歌只追加，不打断正在播放的歌",
       "ok": true,
       "detail": {
-        "currentId": 65536,
+        "currentId": 25638273,
         "queueLength": 4,
         "autoQueueIds": [
-          25703004,
-          82203
+          530995517,
+          1959528822,
+          554242032
         ]
       }
     },
     {
-      "name": "网页：真实浏览器从一批衔接到后台补充的下一批，没有因队列耗尽停止",
+      "name": "网页：第一首自然播完后自动接入后台补充的一批（没有因队列耗尽停止）",
       "ok": true,
       "detail": {
-        "currentId": 25703004,
+        "currentId": 530995517,
+        "naturalTrack": {
+          "id": 25638273,
+          "durationSec": 198.6
+        },
         "fromBatch": [
-          25703004,
-          82203
+          530995517,
+          1959528822,
+          554242032
         ],
+        "status": "解析音源：几分之几 (You Complete Me)…"
+      }
+    },
+    {
+      "name": "网页：队列播完时进入等待，批次到达后自动继续（不停止播放）",
+      "ok": true,
+      "detail": {
+        "waitingStatus": "当前队列已播完，正在等后台补充的下一批…",
+        "resumedId": 551400874,
+        "fromBatch": [
+          551400874,
+          306665,
+          38576323
+        ]
+      }
+    },
+    {
+      "name": "网页：补歌返回已播过的歌曲时仍会追加（不按整个历史队列去重清零）",
+      "ok": true,
+      "detail": {
         "queueLength": 4,
-        "status": "播放中：如果有来生 — 谭维维"
+        "reAppended": [
+          65536
+        ],
+        "currentId": 65538,
+        "prepStatus": "已后台补充 1 首（Codex 选歌），不打断当前歌曲。"
+      }
+    },
+    {
+      "name": "网页：完整队列播到底后继续播放（不因队列耗尽停止）",
+      "ok": true,
+      "detail": {
+        "currentId": 65536,
+        "queueLength": 5,
+        "status": "播放中：爱情转移 — 陈奕迅"
       }
     },
     {
@@ -275,7 +344,7 @@
       "ok": true,
       "detail": {
         "currentId": 65536,
-        "advancedBy": 2.5,
+        "advancedBy": 2.51,
         "inFlightDuring": true
       }
     },
@@ -285,9 +354,9 @@
       "detail": {
         "currentId": 65536,
         "autoQueueIds": [
-          534542079,
-          1888390721,
-          2066755290
+          150623,
+          256621,
+          36392029
         ]
       }
     },
@@ -298,11 +367,10 @@
         "paused": true,
         "timeDelta": 0,
         "autoQueueIds": [
-          1400259397,
-          442314991,
-          493283125
+          574908698,
+          408814900
         ],
-        "prepStatus": "已后台补充 3 首（Codex 选歌），不打断当前歌曲。"
+        "prepStatus": "已后台补充 2 首（Codex 选歌），不打断当前歌曲。"
       }
     },
     {
@@ -320,13 +388,13 @@
       "name": "网页：刷新只重连同一会话，不自动出声、不新建会话、不产生重复播放任务",
       "ok": true,
       "detail": {
-        "before": "s_mu3jsul9_48uto3",
-        "after": "s_mu3jsul9_48uto3",
+        "before": "s_mu3n37af_zb4u1j",
+        "after": "s_mu3n37af_zb4u1j",
         "paused": true,
         "audioSrc": "",
         "openSessions": 1,
-        "playsBefore": 7,
-        "playsAfter": 7
+        "playsBefore": 12,
+        "playsAfter": 12
       }
     },
     {
@@ -348,6 +416,22 @@
       }
     },
     {
+      "name": "网页：降级补入的歌曲能真实播放",
+      "ok": true,
+      "detail": {
+        "currentId": 557199195,
+        "fromDegradedBatch": [
+          557199195,
+          118261,
+          411214279,
+          150667,
+          490407216,
+          1406686876
+        ],
+        "currentTime": 0.6
+      }
+    },
+    {
       "name": "网页：候选不足时给出明确状态并进入等待恢复（不再自动重试）",
       "ok": true,
       "detail": {
@@ -362,10 +446,10 @@
     "isolatedServer": {
       "port": 8792,
       "db": "radio.db",
-      "log": "/var/folders/qb/hypp8v113nn6v1ssxflxsb7m0000gn/T/radio-orch-xH06X3/server.log"
+      "log": "/var/folders/qb/hypp8v113nn6v1ssxflxsb7m0000gn/T/radio-orch-rvbVRd/server.log"
     },
     "controllerUnit": {
-      "calls": 9,
+      "calls": 10,
       "statuses": [
         {
           "text": "后台准备下一批歌曲…",
@@ -418,6 +502,18 @@
         {
           "text": "后台准备下一批歌曲…",
           "cls": "prep"
+        },
+        {
+          "text": "后台准备下一批歌曲…",
+          "cls": "prep"
+        },
+        {
+          "text": "后台准备下一批歌曲…",
+          "cls": "prep"
+        },
+        {
+          "text": "后台补歌失败（补歌结果与待播重复），1 秒后重试（第 1/3 次）。",
+          "cls": "warn"
         }
       ]
     },
@@ -426,7 +522,7 @@
         "calls": 1,
         "injected": 1,
         "lastMode": "slow",
-        "lastAt": "2026-09-16T03:34:42.924Z",
+        "lastAt": "2026-09-16T05:03:20.620Z",
         "mode": "slow",
         "delayMs": 1200
       },
@@ -437,42 +533,42 @@
     "realCodex": {
       "picks": [
         {
-          "id": 209397,
-          "name": "太聪明",
+          "id": 471403427,
+          "name": "我喜欢上你时的内心活动",
           "artists": "陈绮贞",
-          "album": "Groupies吉他手",
-          "durationMs": 263173,
-          "fee": 1,
-          "mvId": 10927690,
-          "reason": "轻柔的吉他与低声絮语，让傍晚的心绪慢慢放松。",
+          "album": "我喜欢上你时的内心活动",
+          "durationMs": 225761,
+          "fee": 0,
+          "mvId": 5479022,
+          "reason": "轻柔的吟唱像傍晚的微风，让心绪慢慢松下来。",
           "type": "track",
           "kind": "full",
           "playable": true,
           "error": null
         },
         {
-          "id": 326719,
-          "name": "喜欢",
-          "artists": "张悬",
-          "album": "亲爱的...我还不知道",
-          "durationMs": 279933,
-          "fee": 1,
-          "mvId": 292137,
-          "reason": "温柔舒展的旋律，适合独处时静静听心事。",
+          "id": 569212211,
+          "name": "盛夏",
+          "artists": "毛不易",
+          "album": "平凡的一天",
+          "durationMs": 274306,
+          "fee": 8,
+          "mvId": 0,
+          "reason": "温暖舒缓的旋律，适合独自静听，让回忆轻轻流淌。",
           "type": "track",
           "kind": "full",
           "playable": true,
           "error": null
         },
         {
-          "id": 298838,
-          "name": "传奇",
-          "artists": "王菲",
-          "album": "传奇",
-          "durationMs": 296124,
+          "id": 25730757,
+          "name": "稳稳的幸福",
+          "artists": "陈奕迅",
+          "album": "稳稳的幸福",
+          "durationMs": 223149,
           "fee": 1,
-          "mvId": 134205,
-          "reason": "空灵歌声留下悠长余韵，为安静的傍晚收尾。",
+          "mvId": 303277,
+          "reason": "用踏实温柔的歌声收尾，让独处的夜晚多一份安心。",
           "type": "track",
           "kind": "full",
           "playable": true,
@@ -480,7 +576,7 @@
         }
       ],
       "meta": {
-        "durationMs": 15326,
+        "durationMs": 14550,
         "candidates": 60,
         "excluded": 0,
         "codex": {
@@ -488,10 +584,10 @@
           "requested": 3,
           "timeoutMs": 90000,
           "mode": "off",
-          "durationMs": 13723,
+          "durationMs": 13875,
           "exitCode": 0,
           "timedOut": false,
-          "tokens": 22770,
+          "tokens": 22833,
           "spawnError": false
         }
       }
@@ -516,7 +612,7 @@
     ]
   },
   "summary": {
-    "passed": 33,
+    "passed": 40,
     "failed": 0
   }
 }

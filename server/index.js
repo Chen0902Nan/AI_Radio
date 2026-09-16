@@ -26,6 +26,9 @@ let injectAudioFailures = 0
 // 故障注入开关：让接下来的 N 次补歌请求直接返回指定错误，
 // 用于验证网页对候选不足/服务不可用的状态提示与有界重试。
 let forcedRefillError = null
+// 故障注入开关：让接下来的 N 次补歌请求返回指定曲目（仍逐首过可播性），
+// 用于确定性验证「补歌返回已播过的歌」这类场景。
+let forcedRefillPicks = null
 
 db.init()
 // 服务重启后，上一条开着但已无心跳的会话不再算进行中；网页刷新只会连上当前会话
@@ -391,6 +394,15 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, forced: forcedRefillError })
     }
 
+    if (p === '/api/_test/refill-forced-picks' && TEST_HOOKS) {
+      const body = await readBody(req)
+      forcedRefillPicks =
+        Array.isArray(body.ids) && body.ids.length
+          ? { ids: body.ids.map(Number).filter(Number.isFinite), remaining: Number(body.count ?? 1) }
+          : null
+      return sendJson(res, 200, { ok: true, forcedPicks: forcedRefillPicks })
+    }
+
     if (p === '/api/queue/refill' && req.method === 'POST') {
       const body = await readBody(req)
 
@@ -399,6 +411,43 @@ const server = http.createServer(async (req, res) => {
         const code = forcedRefillError.code
         const status = code === 'candidates_exhausted' || code === 'session_ended' ? 409 : code === 'music_unavailable' ? 503 : 502
         return sendJson(res, status, { ok: false, code, message: forcedRefillError.message })
+      }
+
+      if (forcedRefillPicks && forcedRefillPicks.remaining > 0) {
+        forcedRefillPicks.remaining -= 1
+        const session = ncm.loadSession()
+        if (!session) return sendJson(res, 401, { ok: false, code: 'NOT_LOGGED_IN', message: '未登录' })
+        let library = []
+        try {
+          library = await getLikedTracksCached(session)
+        } catch (_) {}
+        const byId = new Map(library.map((t) => [Number(t.id), t]))
+        const checked = await orchestrator.checkPlayable(
+          forcedRefillPicks.ids.map((id) => {
+            const t = byId.get(Number(id)) || {}
+            return {
+              id: Number(id),
+              name: t.name || `测试曲目 ${id}`,
+              artists: t.artists || '',
+              album: t.album || '',
+              durationMs: t.durationMs || 0,
+              reason: '（测试注入）强制返回的批次',
+            }
+          }),
+        )
+        const playable = checked.filter((c) => c.playable)
+        if (!playable.length) {
+          return sendJson(res, 502, { ok: false, code: 'no_playable', message: '（测试注入）强制批次都不可播' })
+        }
+        return sendJson(res, 200, {
+          ok: true,
+          picks: playable,
+          dropped: checked.filter((c) => !c.playable),
+          rejected: [],
+          source: 'forced',
+          degraded: false,
+          meta: { forced: true, candidates: playable.length },
+        })
       }
 
       const session = ncm.loadSession()

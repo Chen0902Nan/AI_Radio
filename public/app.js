@@ -93,13 +93,14 @@ function setPrepStatus(text, cls = '') {
   el.prep.className = 'status prep' + (cls ? ' ' + cls : '')
 }
 
-/** 只追加、不替换；去重掉已经在队列或已失败的曲目。 */
+/** 只追加、不替换；去重范围与发给服务端的排除范围完全一致（当前曲 + 待播 + 已失败），
+ *  不含已播过的历史曲目——否则完整曲库播到末尾时，补歌结果会被全部过滤成 0 首。 */
 function appendPicks(picks) {
-  const known = new Set(state.queue.map((t) => Number(t.id)))
+  const known = new Set(getRefillExclusion())
   const added = []
   for (const p of picks) {
     const id = Number(p.id)
-    if (!Number.isFinite(id) || known.has(id) || state.failedIds.has(id)) continue
+    if (!Number.isFinite(id) || known.has(id)) continue
     known.add(id)
     added.push({ ...p, type: p.type || 'track', auto: true })
   }
@@ -133,6 +134,7 @@ const refillController = new RadioOrchestrator.RefillController({
   onStatus: setPrepStatus,
   onBatch: (picks, res) => {
     const added = appendPicks(picks)
+    if (!added.length) return added // 实际追加 0 首：交给控制器按失败处理，不能在这里跳到队尾继续播
     if (res.degraded) {
       setPrepStatus(`Codex 暂不可用，已用曲库候选降级续播 ${added.length} 首（不打断当前歌曲）。`, 'warn')
     } else {
@@ -143,6 +145,7 @@ const refillController = new RadioOrchestrator.RefillController({
       state.awaitingRefill = false
       playIndex(state.index + 1)
     }
+    return added
   },
 })
 
@@ -340,6 +343,7 @@ function renderTracks() {
     const row = document.createElement('div')
     row.className = 'track'
     row.dataset.id = t.id
+    row.dataset.index = i
     row.innerHTML = `<span class="idx">${i + 1}</span><span class="tn" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span><span class="td">${fmtMs(t.durationMs)}</span>`
     row.title = `${t.name} — ${t.artists}${t.album ? ' · ' + t.album : ''}`
     row.onclick = () => playIndex(i, { userGesture: true })
@@ -351,7 +355,8 @@ function renderTracks() {
 function markCurrent() {
   document.querySelectorAll('.track').forEach((row) => {
     const id = Number(row.dataset.id)
-    row.classList.toggle('current', state.current && id === state.current.id)
+    // 允许同一首歌重复入队（历史曲目被重新补入），当前曲按位置标记而不是按 id
+    row.classList.toggle('current', Number(row.dataset.index) === state.index)
     row.classList.toggle('failed', state.failedIds.has(id))
     row.classList.toggle('codex', state.codexPicks.some((p) => p.id === id))
     row.classList.toggle('liked', state.feedback.get(id) === 'like')
