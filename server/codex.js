@@ -40,13 +40,28 @@ const PICK_SCHEMA = {
 /* ---------- 测试注入（仅 RADIO_TEST_HOOKS=1） ---------- */
 
 let injectedMode = 'off'
-function setCodexMode(mode) {
+let injectedDelayMs = 0
+// 调用计数：用于验证「同一会话不会并发生成多批」和「冷却期不消耗订阅」。
+const stats = { calls: 0, injected: 0, lastMode: 'off', lastAt: null }
+
+function setCodexMode(mode, { delayMs } = {}) {
   injectedMode = mode || 'off'
+  if (delayMs !== undefined) injectedDelayMs = Math.max(0, Number(delayMs) || 0)
+  stats.lastMode = injectedMode
   return injectedMode
 }
 function getCodexMode() {
   return injectedMode
 }
+function getStats() {
+  return { ...stats, mode: injectedMode, delayMs: injectedDelayMs }
+}
+function resetStats() {
+  stats.calls = 0
+  stats.injected = 0
+  stats.lastAt = null
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 const INJECTED_RAW = {
   // 全是编造的 id：应被校验全部拒绝，最终判为输出无效
@@ -170,11 +185,22 @@ async function pickTracks({ candidates, brief, count = 5, timeoutMs = DEFAULT_TI
   }
   const wanted = Math.max(1, Math.min(Number(count) || 5, candidates.length))
   const started = Date.now()
+  stats.calls += 1
+  stats.lastAt = new Date(started).toISOString()
+  if (process.env.RADIO_TEST_HOOKS === '1' && injectedMode !== 'off') stats.injected += 1
 
   let raw = null
   let meta = { candidates: candidates.length, requested: wanted, timeoutMs, mode: injectedMode }
 
   if (process.env.RADIO_TEST_HOOKS === '1' && injectedMode !== 'off') {
+    if (injectedMode === 'slow') {
+      // 慢响应：用于验证「补歌不阻塞已有音乐」以及暂停/停止时的迟到结果
+      await sleep(injectedDelayMs || 4000)
+      raw = { picks: pickRealFor(candidates, wanted) }
+    }
+    if (injectedMode === 'success') {
+      raw = { picks: pickRealFor(candidates, wanted) }
+    }
     if (injectedMode === 'timeout') {
       return {
         ok: false,
@@ -282,6 +308,8 @@ module.exports = {
   buildPrompt,
   setCodexMode,
   getCodexMode,
+  getStats,
+  resetStats,
   CODEX_BIN,
   DEFAULT_TIMEOUT_MS,
 }

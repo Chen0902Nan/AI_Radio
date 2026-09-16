@@ -77,6 +77,7 @@ button.ghost { background: transparent; font-size: 13px; padding: 5px 12px; }
 .status.playing { color: var(--ok); border-color: var(--ok); }
 .status.warn { color: var(--warn); border-color: var(--warn); }
 .status.bad { color: var(--bad); border-color: var(--bad); }
+.status.prep { margin-top: 8px; font-size: 12px; color: #7b8296; }
 
 .library { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
 
@@ -100,6 +101,10 @@ button.ghost { background: transparent; font-size: 13px; padding: 5px 12px; }
 .track.codex .tn::after {
   content: 'Codex'; margin-left: 8px; font-size: 10px; color: var(--accent);
   border: 1px solid var(--accent); border-radius: 999px; padding: 0 6px;
+}
+.track.auto .tn::after {
+  content: '补'; margin-left: 8px; font-size: 10px; color: var(--ok);
+  border: 1px solid var(--ok); border-radius: 999px; padding: 0 6px;
 }
 .lib-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .lib-body { display: grid; grid-template-columns: 210px 1fr; gap: 18px; }

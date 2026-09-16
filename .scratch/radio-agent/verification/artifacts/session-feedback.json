@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-15T08:58:10.144Z",
+  "at": "2026-09-16T03:20:05.875Z",
   "base": "http://127.0.0.1:8787",
   "checks": [
     {
@@ -13,8 +13,8 @@
       "name": "开播建立会话；再次开播复用同一会话（不会重复建会话）",
       "ok": true,
       "detail": {
-        "first": "s_mu2fvstt_i54tta",
-        "second": "s_mu2fvstt_i54tta",
+        "first": "s_mu3j8vw2_yhqzzx",
+        "second": "s_mu3j8vw2_yhqzzx",
         "reused": true
       }
     },
@@ -31,7 +31,7 @@
       "name": "停止会结束会话",
       "ok": true,
       "detail": {
-        "id": "s_mu2fvstt_i54tta"
+        "id": "s_mu3j8vw2_yhqzzx"
       }
     },
     {
@@ -45,8 +45,8 @@
       "name": "停止后临时调整被清空，恢复个人默认",
       "ok": true,
       "detail": {
-        "oldId": "s_mu2fvstt_i54tta",
-        "newId": "s_mu2fvsuz_nttfeh",
+        "oldId": "s_mu3j8vw2_yhqzzx",
+        "newId": "s_mu3j8vw7_19t13c",
         "adjustments": {}
       }
     },
@@ -54,8 +54,8 @@
       "name": "会话生命周期已落库（含结束时间与原因）",
       "ok": true,
       "detail": {
-        "total": 6,
-        "stopped": 5
+        "total": 3,
+        "stopped": 2
       }
     },
     {
@@ -101,38 +101,6 @@
           {
             "sentiment": "dislike",
             "revoked": true
-          },
-          {
-            "sentiment": "like",
-            "revoked": true
-          },
-          {
-            "sentiment": "dislike",
-            "revoked": true
-          },
-          {
-            "sentiment": "dislike",
-            "revoked": true
-          },
-          {
-            "sentiment": "like",
-            "revoked": true
-          },
-          {
-            "sentiment": "like",
-            "revoked": true
-          },
-          {
-            "sentiment": "dislike",
-            "revoked": true
-          },
-          {
-            "sentiment": "like",
-            "revoked": true
-          },
-          {
-            "sentiment": "dislike",
-            "revoked": true
           }
         ]
       }
@@ -151,7 +119,7 @@
       "detail": {
         "samplesPerRun": 20,
         "runs": 250,
-        "hitRateNeutral": 15,
+        "hitRateNeutral": 12,
         "hitRateDisliked": 0,
         "penalty": 0.0001
       }
@@ -160,8 +128,8 @@
       "name": "“喜欢”会提高该曲在选歌中的出现",
       "ok": true,
       "detail": {
-        "hitRateLiked": 45,
-        "hitRateNeutral": 15,
+        "hitRateLiked": 37,
+        "hitRateNeutral": 12,
         "boost": 4
       }
     },
@@ -178,7 +146,7 @@
       "name": "开播后建立会话并开始播放",
       "ok": true,
       "detail": {
-        "sessionId": "s_mu2fw0o1_jm7tgr",
+        "sessionId": "s_mu3j91x6_orctcw",
         "id": 65536,
         "button": "暂停"
       }
@@ -187,17 +155,17 @@
       "name": "开始播放会写入带会话的播放记录",
       "ok": true,
       "detail": {
-        "playId": 3
+        "playId": 7
       }
     },
     {
       "name": "播放记录已落库且挂在会话上",
       "ok": true,
       "detail": {
-        "count": 3,
+        "count": 7,
         "latest": {
           "track": 65536,
-          "session": "s_mu2fw0o1_jm7tgr"
+          "session": "s_mu3j91x6_orctcw"
         }
       }
     },
@@ -205,8 +173,8 @@
       "name": "页面刷新只是连回同一会话，不新建会话也不自动出声",
       "ok": true,
       "detail": {
-        "before": "s_mu2fw0o1_jm7tgr",
-        "after": "s_mu2fw0o1_jm7tgr",
+        "before": "s_mu3j91x6_orctcw",
+        "after": "s_mu3j91x6_orctcw",
         "paused": true,
         "openSessions": 1,
         "button": "继续"
@@ -260,33 +228,35 @@
       "ok": true,
       "detail": {
         "outcomes": [
-          "stopped"
+          "stopped",
+          "replaced",
+          "skipped"
         ],
-        "total": 2
+        "total": 6
       }
     }
   ],
   "evidence": {
     "session": {
       "first": {
-        "id": "s_mu2fvstt_i54tta",
-        "started_at": 1789462690482,
+        "id": "s_mu3j8vw2_yhqzzx",
+        "started_at": 1789528806002,
         "ended_at": null,
         "end_reason": null,
         "adjustments": {},
         "reused": false
       },
       "second": {
-        "id": "s_mu2fvstt_i54tta",
-        "started_at": 1789462690482,
+        "id": "s_mu3j8vw2_yhqzzx",
+        "started_at": 1789528806002,
         "ended_at": null,
         "end_reason": null,
         "adjustments": {},
         "reused": true
       },
       "afterStop": {
-        "id": "s_mu2fvsuz_nttfeh",
-        "started_at": 1789462690523,
+        "id": "s_mu3j8vw7_19t13c",
+        "started_at": 1789528806007,
         "ended_at": null,
         "end_reason": null,
         "adjustments": {},
@@ -295,34 +265,34 @@
     },
     "feedback": {
       "like": {
-        "id": 9,
+        "id": 1,
         "track_id": 65536,
         "track_name": "爱情转移",
         "artists": "陈奕迅",
         "sentiment": "like",
         "source": "ui",
-        "session_id": "s_mu2fvsuz_nttfeh",
-        "created_at": 1789462692344
+        "session_id": "s_mu3j8vw7_19t13c",
+        "created_at": 1789528808384
       },
       "dislike": {
-        "id": 10,
+        "id": 2,
         "track_id": 65536,
         "track_name": "爱情转移",
         "artists": "陈奕迅",
         "sentiment": "dislike",
         "source": "ui",
-        "session_id": "s_mu2fvsuz_nttfeh",
-        "created_at": 1789462692351
+        "session_id": "s_mu3j8vw7_19t13c",
+        "created_at": 1789528808385
       },
       "revoked": {
-        "id": 10,
+        "id": 2,
         "track_id": 65536,
         "track_name": "爱情转移",
         "artists": "陈奕迅",
         "sentiment": "dislike",
         "source": "ui",
-        "session_id": "s_mu2fvsuz_nttfeh",
-        "created_at": 1789462692351
+        "session_id": "s_mu3j8vw7_19t13c",
+        "created_at": 1789528808385
       },
       "history": [
         {
@@ -332,9 +302,9 @@
           "artists": "陈奕迅",
           "sentiment": "like",
           "source": "ui",
-          "session_id": "s_mu2fobf7_69mxbu",
-          "created_at": 1789462346922,
-          "revoked_at": 1789462346933
+          "session_id": "s_mu3j8vw7_19t13c",
+          "created_at": 1789528808384,
+          "revoked_at": 1789528808385
         },
         {
           "id": 2,
@@ -343,105 +313,17 @@
           "artists": "陈奕迅",
           "sentiment": "dislike",
           "source": "ui",
-          "session_id": "s_mu2fobf7_69mxbu",
-          "created_at": 1789462346933,
-          "revoked_at": 1789462346942
-        },
-        {
-          "id": 3,
-          "track_id": 65536,
-          "track_name": "爱情转移",
-          "artists": "陈奕迅",
-          "sentiment": "like",
-          "source": "ui",
-          "session_id": "s_mu2fs8zi_mizajp",
-          "created_at": 1789462527215,
-          "revoked_at": 1789462527216
-        },
-        {
-          "id": 4,
-          "track_id": 65536,
-          "track_name": "爱情转移",
-          "artists": "陈奕迅",
-          "sentiment": "dislike",
-          "source": "ui",
-          "session_id": "s_mu2fs8zi_mizajp",
-          "created_at": 1789462527216,
-          "revoked_at": 1789462527217
-        },
-        {
-          "id": 5,
-          "track_id": 65536,
-          "track_name": "爱情转移",
-          "artists": "陈奕迅",
-          "sentiment": "dislike",
-          "source": "ui",
-          "session_id": "s_mu2fs8zi_mizajp",
-          "created_at": 1789462528793,
-          "revoked_at": 1789462528823
-        },
-        {
-          "id": 6,
-          "track_id": 65536,
-          "track_name": "爱情转移",
-          "artists": "陈奕迅",
-          "sentiment": "like",
-          "source": "ui",
-          "session_id": "s_mu2fs8zi_mizajp",
-          "created_at": 1789462528824,
-          "revoked_at": 1789462528840
-        },
-        {
-          "id": 7,
-          "track_id": 65536,
-          "track_name": "爱情转移",
-          "artists": "陈奕迅",
-          "sentiment": "like",
-          "source": "ui",
-          "session_id": "s_mu2fsezv_ym8enr",
-          "created_at": 1789462542190,
-          "revoked_at": 1789462542505
-        },
-        {
-          "id": 8,
-          "track_id": 65536,
-          "track_name": "爱情转移",
-          "artists": "陈奕迅",
-          "sentiment": "dislike",
-          "source": "ui",
-          "session_id": "s_mu2fsezv_ym8enr",
-          "created_at": 1789462542505,
-          "revoked_at": 1789462542822
-        },
-        {
-          "id": 9,
-          "track_id": 65536,
-          "track_name": "爱情转移",
-          "artists": "陈奕迅",
-          "sentiment": "like",
-          "source": "ui",
-          "session_id": "s_mu2fvsuz_nttfeh",
-          "created_at": 1789462692344,
-          "revoked_at": 1789462692351
-        },
-        {
-          "id": 10,
-          "track_id": 65536,
-          "track_name": "爱情转移",
-          "artists": "陈奕迅",
-          "sentiment": "dislike",
-          "source": "ui",
-          "session_id": "s_mu2fvsuz_nttfeh",
-          "created_at": 1789462692351,
-          "revoked_at": 1789462692355
+          "session_id": "s_mu3j8vw7_19t13c",
+          "created_at": 1789528808385,
+          "revoked_at": 1789528808387
         }
       ]
     },
     "weighting": {
       "trackId": 65536,
-      "neutralHit": 15,
+      "neutralHit": 12,
       "dislikedHit": 0,
-      "likedHit": 45,
+      "likedHit": 37,
       "samplesPerRun": 20,
       "runs": 250
     },
@@ -456,6 +338,7 @@
         "loadedId": null,
         "paused": true,
         "ended": false,
+        "stopped": false,
         "currentTime": 0,
         "duration": null,
         "readyState": 0,
@@ -464,7 +347,7 @@
         "resolveAttempts": 0,
         "resolving": false,
         "userWantsPlayback": false,
-        "playToken": 0,
+        "playToken": 1,
         "failedIds": [],
         "lastError": null,
         "status": "已读取红心歌曲 456 首，收藏/自建歌单 6 个。",
@@ -934,7 +817,29 @@
         "adjustments": {},
         "playId": null,
         "feedback": {},
-        "playButtonLabel": "开播"
+        "playButtonLabel": "开播",
+        "prepStatus": "后台补歌：待播不足时会自动准备下一批，不打断当前歌曲。",
+        "awaitingRefill": false,
+        "pending": 456,
+        "refill": {
+          "epoch": 1,
+          "inFlight": false,
+          "attempts": 0,
+          "state": "idle",
+          "nextRetryAt": 0,
+          "lastReason": null,
+          "batches": 0,
+          "degradedBatches": 0,
+          "awaiting": false,
+          "config": {
+            "threshold": 2,
+            "batchSize": 5,
+            "backoffBaseMs": 30000,
+            "backoffMaxMs": 300000,
+            "maxAttempts": 5
+          }
+        },
+        "autoQueueIds": []
       },
       "s1": {
         "currentId": 65536,
@@ -942,11 +847,12 @@
         "index": 0,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789462699887",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789528813823",
         "loadedId": 65536,
         "paused": false,
         "ended": false,
-        "currentTime": 1.770413,
+        "stopped": false,
+        "currentTime": 1.875008,
         "duration": 259.986667,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -954,7 +860,7 @@
         "resolveAttempts": 1,
         "resolving": false,
         "userWantsPlayback": true,
-        "playToken": 1,
+        "playToken": 2,
         "failedIds": [],
         "lastError": null,
         "status": "播放中：爱情转移 — 陈奕迅",
@@ -1420,11 +1326,33 @@
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
         "codexStatusClass": "status",
-        "sessionId": "s_mu2fw0o1_jm7tgr",
+        "sessionId": "s_mu3j91x6_orctcw",
         "adjustments": {},
-        "playId": 3,
+        "playId": 7,
         "feedback": {},
-        "playButtonLabel": "暂停"
+        "playButtonLabel": "暂停",
+        "prepStatus": "后台补歌：待播不足时会自动准备下一批，不打断当前歌曲。",
+        "awaitingRefill": false,
+        "pending": 455,
+        "refill": {
+          "epoch": 1,
+          "inFlight": false,
+          "attempts": 0,
+          "state": "idle",
+          "nextRetryAt": 0,
+          "lastReason": null,
+          "batches": 0,
+          "degradedBatches": 0,
+          "awaiting": false,
+          "config": {
+            "threshold": 2,
+            "batchSize": 5,
+            "backoffBaseMs": 30000,
+            "backoffMaxMs": 300000,
+            "maxAttempts": 5
+          }
+        },
+        "autoQueueIds": []
       },
       "afterReload": {
         "currentId": null,
@@ -1436,6 +1364,7 @@
         "loadedId": null,
         "paused": true,
         "ended": false,
+        "stopped": false,
         "currentTime": 0,
         "duration": null,
         "readyState": 0,
@@ -1444,7 +1373,7 @@
         "resolveAttempts": 0,
         "resolving": false,
         "userWantsPlayback": false,
-        "playToken": 0,
+        "playToken": 1,
         "failedIds": [],
         "lastError": null,
         "status": "已读取红心歌曲 456 首，收藏/自建歌单 6 个。",
@@ -1910,11 +1839,33 @@
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
         "codexStatusClass": "status",
-        "sessionId": "s_mu2fw0o1_jm7tgr",
+        "sessionId": "s_mu3j91x6_orctcw",
         "adjustments": {},
         "playId": null,
         "feedback": {},
-        "playButtonLabel": "继续"
+        "playButtonLabel": "继续",
+        "prepStatus": "后台补歌：待播不足时会自动准备下一批，不打断当前歌曲。",
+        "awaitingRefill": false,
+        "pending": 456,
+        "refill": {
+          "epoch": 1,
+          "inFlight": false,
+          "attempts": 0,
+          "state": "idle",
+          "nextRetryAt": 0,
+          "lastReason": null,
+          "batches": 0,
+          "degradedBatches": 0,
+          "awaiting": false,
+          "config": {
+            "threshold": 2,
+            "batchSize": 5,
+            "backoffBaseMs": 30000,
+            "backoffMaxMs": 300000,
+            "maxAttempts": 5
+          }
+        },
+        "autoQueueIds": []
       },
       "stopped": {
         "currentId": 65536,
@@ -1922,11 +1873,12 @@
         "index": 0,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789462706767",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789528821139",
         "loadedId": 65536,
         "paused": true,
         "ended": false,
-        "currentTime": 2.635594,
+        "stopped": false,
+        "currentTime": 2.755935,
         "duration": 259.986667,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -1934,7 +1886,7 @@
         "resolveAttempts": 1,
         "resolving": false,
         "userWantsPlayback": false,
-        "playToken": 2,
+        "playToken": 3,
         "failedIds": [],
         "lastError": null,
         "status": "已停止收听。下次开播会建立新的收听会话。",
@@ -2404,7 +2356,29 @@
         "adjustments": {},
         "playId": null,
         "feedback": {},
-        "playButtonLabel": "开播"
+        "playButtonLabel": "开播",
+        "prepStatus": "已停止；后台补歌已取消。",
+        "awaitingRefill": false,
+        "pending": 455,
+        "refill": {
+          "epoch": 2,
+          "inFlight": false,
+          "attempts": 0,
+          "state": "idle",
+          "nextRetryAt": 0,
+          "lastReason": null,
+          "batches": 0,
+          "degradedBatches": 0,
+          "awaiting": false,
+          "config": {
+            "threshold": 2,
+            "batchSize": 5,
+            "backoffBaseMs": 30000,
+            "backoffMaxMs": 300000,
+            "maxAttempts": 5
+          }
+        },
+        "autoQueueIds": []
       }
     }
   },

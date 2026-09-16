@@ -334,7 +334,8 @@ async function main() {
 
   const require2 = createRequire(import.meta.url)
   const rawDb = require2('node:sqlite').DatabaseSync
-  const dbFile = path.join(ROOT, 'data/radio.db')
+  // 允许用环境变量指向独立数据库，避免验证污染真实设置/反馈/播放记录
+  const dbFile = process.env.RADIO_DB_FILE || path.join(ROOT, 'data/radio.db')
   const conn = new rawDb(dbFile, { readOnly: false })
   const db = {
     sessions: () => conn.prepare('SELECT * FROM sessions ORDER BY started_at').all(),

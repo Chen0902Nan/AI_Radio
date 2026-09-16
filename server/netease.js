@@ -341,6 +341,13 @@ function setInjectedUnplayable(n) {
   return injectedUnplayable
 }
 
+// 测试专用：让接下来的 N 次音源查询直接报错，用于验证“音乐服务不可用”的降级与退避。
+let injectedResolveErrors = 0
+function setInjectedResolveErrors(n) {
+  injectedResolveErrors = Number(n) || 0
+  return injectedResolveErrors
+}
+
 function cacheGet(id, identity) {
   const key = Number(id)
   const hit = urlCache.get(key)
@@ -365,6 +372,12 @@ function cacheGet(id, identity) {
  */
 async function resolveTrack(id, { force = false } = {}) {
   const key = Number(id)
+  if (process.env.RADIO_TEST_HOOKS === '1' && injectedResolveErrors > 0) {
+    injectedResolveErrors -= 1
+    const err = new Error('（测试注入）音源接口失败')
+    err.code = 'injected_resolve_error'
+    throw err
+  }
   // 先确定身份，再决定能不能命中缓存：
   // 正常情况下必须已登录；只有在开启测试注入时才允许游客态解析，
   // 用于在拿到本人资料前验证播放链路本身。游客态同样受网易权限限制。
@@ -444,6 +457,7 @@ module.exports = {
   resolveTrack,
   clearUrlCache,
   setInjectedUnplayable,
+  setInjectedResolveErrors,
   currentIdentity,
   normalizeTrack,
   DATA_DIR,

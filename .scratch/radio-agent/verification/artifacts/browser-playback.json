@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-15T09:03:46.841Z",
+  "at": "2026-09-16T03:22:09.604Z",
   "base": "http://127.0.0.1:8787",
   "headless": true,
   "checks": [
@@ -24,9 +24,9 @@
       "ok": true,
       "detail": {
         "id": 65536,
-        "currentTime": 6.22,
+        "currentTime": 6.34,
         "duration": 259.99,
-        "decodedBytes": 262269,
+        "decodedBytes": 266449,
         "networkState": 1
       }
     },
@@ -37,7 +37,7 @@
         "from": 65536,
         "to": 65538,
         "title": "好久不见",
-        "currentTime": 1.34
+        "currentTime": 1.24
       }
     },
     {
@@ -54,7 +54,7 @@
       "name": "失败后不是立即重试（有约 1.2s 退避）",
       "ok": true,
       "detail": {
-        "backoffMs": 1203
+        "backoffMs": 1210
       }
     },
     {
@@ -89,7 +89,7 @@
           28403111,
           521749251
         ],
-        "stoppedAfterMs": 2439
+        "stoppedAfterMs": 2465
       }
     },
     {
@@ -99,7 +99,7 @@
         "resolveAttemptsBefore": 6,
         "resolveAttemptsAfter": 9,
         "delta": 3,
-        "observeMs": 10439
+        "observeMs": 10465
       }
     },
     {
@@ -111,7 +111,7 @@
         "durationSec": 260,
         "playerReportedDurationSec": 260,
         "endedAtSec": 259.99,
-        "wallClockSec": 260,
+        "wallClockSec": 260.1,
         "monotonic": true,
         "sampleCount": 174
       }
@@ -120,7 +120,7 @@
       "name": "播放耗时与真实时长一致（不是加速或跳段）",
       "ok": true,
       "detail": {
-        "wallClockSec": 260,
+        "wallClockSec": 260.1,
         "durationSec": 260
       }
     },
@@ -208,11 +208,12 @@
       "index": 0,
       "queueLength": 456,
       "started": true,
-      "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789463040084",
+      "audioSrc": "http://127.0.0.1:8787/api/audio/65536?t=1789528965137",
       "loadedId": 65536,
       "paused": false,
       "ended": false,
-      "currentTime": 6.221345,
+      "stopped": false,
+      "currentTime": 6.336947,
       "duration": 259.986667,
       "readyState": 4,
       "consecutiveFailures": 0,
@@ -220,7 +221,7 @@
       "resolveAttempts": 1,
       "resolving": false,
       "userWantsPlayback": true,
-      "playToken": 1,
+      "playToken": 2,
       "failedIds": [],
       "lastError": null,
       "status": "播放中：爱情转移 — 陈奕迅",
@@ -686,13 +687,35 @@
       ],
       "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
       "codexStatusClass": "status",
-      "sessionId": "s_mu2g0izb_r7xgs0",
+      "sessionId": "s_mu3j9d74_09jegb",
       "adjustments": {},
       "playId": 11,
       "feedback": {},
       "playButtonLabel": "暂停",
+      "prepStatus": "后台补歌：待播不足时会自动准备下一批，不打断当前歌曲。",
+      "awaitingRefill": false,
+      "pending": 455,
+      "refill": {
+        "epoch": 1,
+        "inFlight": false,
+        "attempts": 0,
+        "state": "idle",
+        "nextRetryAt": 0,
+        "lastReason": null,
+        "batches": 0,
+        "degradedBatches": 0,
+        "awaiting": false,
+        "config": {
+          "threshold": 2,
+          "batchSize": 5,
+          "backoffBaseMs": 30000,
+          "backoffMaxMs": 300000,
+          "maxAttempts": 5
+        }
+      },
+      "autoQueueIds": [],
       "decoded": {
-        "webkitAudioDecodedByteCount": 262269,
+        "webkitAudioDecodedByteCount": 266449,
         "networkState": 1,
         "errorCode": null
       }
@@ -703,11 +726,12 @@
       "index": 1,
       "queueLength": 456,
       "started": true,
-      "audioSrc": "http://127.0.0.1:8787/api/audio/65538?t=1789463046676",
+      "audioSrc": "http://127.0.0.1:8787/api/audio/65538?t=1789528972220",
       "loadedId": 65538,
       "paused": false,
       "ended": false,
-      "currentTime": 1.337629,
+      "stopped": false,
+      "currentTime": 1.241414,
       "duration": 250.543311,
       "readyState": 4,
       "consecutiveFailures": 0,
@@ -715,7 +739,7 @@
       "resolveAttempts": 2,
       "resolving": false,
       "userWantsPlayback": true,
-      "playToken": 2,
+      "playToken": 3,
       "failedIds": [],
       "lastError": null,
       "status": "播放中：好久不见 — 陈奕迅",
@@ -1181,11 +1205,33 @@
       ],
       "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
       "codexStatusClass": "status",
-      "sessionId": "s_mu2g0izb_r7xgs0",
+      "sessionId": "s_mu3j9d74_09jegb",
       "adjustments": {},
       "playId": 12,
       "feedback": {},
-      "playButtonLabel": "暂停"
+      "playButtonLabel": "暂停",
+      "prepStatus": "后台补歌：待播不足时会自动准备下一批，不打断当前歌曲。",
+      "awaitingRefill": false,
+      "pending": 454,
+      "refill": {
+        "epoch": 1,
+        "inFlight": false,
+        "attempts": 0,
+        "state": "idle",
+        "nextRetryAt": 0,
+        "lastReason": null,
+        "batches": 0,
+        "degradedBatches": 0,
+        "awaiting": false,
+        "config": {
+          "threshold": 2,
+          "batchSize": 5,
+          "backoffBaseMs": 30000,
+          "backoffMaxMs": 300000,
+          "maxAttempts": 5
+        }
+      },
+      "autoQueueIds": []
     },
     "phase3": {
       "injectedTrackId": 167937,
@@ -1200,11 +1246,12 @@
         "index": 3,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789463049398",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/25638273?t=1789528974967",
         "loadedId": 25638273,
         "paused": false,
         "ended": false,
-        "currentTime": 1.325256,
+        "stopped": false,
+        "currentTime": 1.215793,
         "duration": 198.613333,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -1212,7 +1259,7 @@
         "resolveAttempts": 4,
         "resolving": false,
         "userWantsPlayback": true,
-        "playToken": 4,
+        "playToken": 5,
         "failedIds": [
           167937
         ],
@@ -1684,13 +1731,35 @@
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
         "codexStatusClass": "status",
-        "sessionId": "s_mu2g0izb_r7xgs0",
+        "sessionId": "s_mu3j9d74_09jegb",
         "adjustments": {},
         "playId": 13,
         "feedback": {},
-        "playButtonLabel": "暂停"
+        "playButtonLabel": "暂停",
+        "prepStatus": "后台补歌：待播不足时会自动准备下一批，不打断当前歌曲。",
+        "awaitingRefill": false,
+        "pending": 452,
+        "refill": {
+          "epoch": 1,
+          "inFlight": false,
+          "attempts": 0,
+          "state": "idle",
+          "nextRetryAt": 0,
+          "lastReason": null,
+          "batches": 0,
+          "degradedBatches": 0,
+          "awaiting": false,
+          "config": {
+            "threshold": 2,
+            "batchSize": 5,
+            "backoffBaseMs": 30000,
+            "backoffMaxMs": 300000,
+            "maxAttempts": 5
+          }
+        },
+        "autoQueueIds": []
       },
-      "backoffMs": 1203
+      "backoffMs": 1210
     },
     "phase3b": {
       "unplayable": {
@@ -1707,11 +1776,12 @@
         "index": 7,
         "queueLength": 456,
         "started": true,
-        "audioSrc": "http://127.0.0.1:8787/api/audio/26584453?t=1789463052353",
+        "audioSrc": "http://127.0.0.1:8787/api/audio/26584453?t=1789528977932",
         "loadedId": 26584453,
         "paused": false,
         "ended": false,
-        "currentTime": 1.36053,
+        "stopped": false,
+        "currentTime": 1.274755,
         "duration": 247.444898,
         "readyState": 4,
         "consecutiveFailures": 0,
@@ -1719,7 +1789,7 @@
         "resolveAttempts": 6,
         "resolving": false,
         "userWantsPlayback": true,
-        "playToken": 6,
+        "playToken": 7,
         "failedIds": [
           167937,
           108557
@@ -2192,11 +2262,33 @@
         ],
         "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
         "codexStatusClass": "status",
-        "sessionId": "s_mu2g0izb_r7xgs0",
+        "sessionId": "s_mu3j9d74_09jegb",
         "adjustments": {},
         "playId": 14,
         "feedback": {},
-        "playButtonLabel": "暂停"
+        "playButtonLabel": "暂停",
+        "prepStatus": "后台补歌：待播不足时会自动准备下一批，不打断当前歌曲。",
+        "awaitingRefill": false,
+        "pending": 448,
+        "refill": {
+          "epoch": 1,
+          "inFlight": false,
+          "attempts": 0,
+          "state": "idle",
+          "nextRetryAt": 0,
+          "lastReason": null,
+          "batches": 0,
+          "degradedBatches": 0,
+          "awaiting": false,
+          "config": {
+            "threshold": 2,
+            "batchSize": 5,
+            "backoffBaseMs": 30000,
+            "backoffMaxMs": 300000,
+            "maxAttempts": 5
+          }
+        },
+        "autoQueueIds": []
       }
     },
     "phase4": {
@@ -2214,212 +2306,212 @@
       "playerReportedDurationSec": 259.986667,
       "samples": [
         {
-          "t": 1,
-          "currentTime": 0.79,
+          "t": 2,
+          "currentTime": 0.71,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 7533,
-          "currentTime": 8.32,
+          "t": 7518,
+          "currentTime": 8.23,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 15043,
-          "currentTime": 15.84,
+          "t": 15035,
+          "currentTime": 15.74,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 22556,
-          "currentTime": 23.34,
+          "t": 22551,
+          "currentTime": 23.26,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 30069,
-          "currentTime": 30.86,
+          "t": 30068,
+          "currentTime": 30.78,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 37582,
-          "currentTime": 38.37,
+          "t": 37586,
+          "currentTime": 38.3,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 45094,
-          "currentTime": 45.89,
+          "t": 45104,
+          "currentTime": 45.81,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 52666,
-          "currentTime": 53.45,
+          "t": 52621,
+          "currentTime": 53.33,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 60179,
-          "currentTime": 60.97,
+          "t": 60136,
+          "currentTime": 60.85,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 67690,
-          "currentTime": 68.48,
+          "t": 67651,
+          "currentTime": 68.35,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 75201,
-          "currentTime": 75.99,
+          "t": 75168,
+          "currentTime": 75.87,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 82714,
-          "currentTime": 83.5,
+          "t": 82684,
+          "currentTime": 83.39,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 90225,
-          "currentTime": 91.02,
+          "t": 90200,
+          "currentTime": 90.91,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 97737,
-          "currentTime": 98.53,
+          "t": 97716,
+          "currentTime": 98.42,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 105248,
-          "currentTime": 106.03,
+          "t": 105232,
+          "currentTime": 105.94,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 112759,
-          "currentTime": 113.55,
+          "t": 112749,
+          "currentTime": 113.46,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 120272,
-          "currentTime": 121.06,
+          "t": 120271,
+          "currentTime": 120.98,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 127783,
-          "currentTime": 128.57,
+          "t": 127792,
+          "currentTime": 128.5,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 135299,
-          "currentTime": 136.09,
+          "t": 135308,
+          "currentTime": 136.02,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 142809,
-          "currentTime": 143.59,
+          "t": 142824,
+          "currentTime": 143.53,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 150321,
-          "currentTime": 151.11,
+          "t": 150340,
+          "currentTime": 151.05,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 157833,
-          "currentTime": 158.62,
+          "t": 157859,
+          "currentTime": 158.56,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 165346,
-          "currentTime": 166.14,
+          "t": 165378,
+          "currentTime": 166.09,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 172858,
-          "currentTime": 173.64,
+          "t": 172896,
+          "currentTime": 173.61,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 180371,
-          "currentTime": 181.16,
+          "t": 180411,
+          "currentTime": 181.13,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 187883,
-          "currentTime": 188.67,
+          "t": 187927,
+          "currentTime": 188.63,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 195397,
-          "currentTime": 196.19,
+          "t": 195443,
+          "currentTime": 196.15,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 202909,
-          "currentTime": 203.7,
+          "t": 202958,
+          "currentTime": 203.67,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 210420,
-          "currentTime": 211.21,
+          "t": 210474,
+          "currentTime": 211.18,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 217932,
-          "currentTime": 218.72,
+          "t": 217994,
+          "currentTime": 218.7,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 225445,
-          "currentTime": 226.24,
+          "t": 225515,
+          "currentTime": 226.23,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 232957,
+          "t": 233040,
           "currentTime": 233.75,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 240468,
-          "currentTime": 241.26,
+          "t": 240560,
+          "currentTime": 241.27,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 247981,
-          "currentTime": 248.77,
+          "t": 248082,
+          "currentTime": 248.79,
           "paused": false,
           "id": 65536
         },
         {
-          "t": 255491,
-          "currentTime": 256.28,
+          "t": 255601,
+          "currentTime": 256.31,
           "paused": false,
           "id": 65536
         }
@@ -2428,11 +2520,11 @@
       "endedEvent": {
         "type": "ended",
         "id": 65536,
-        "at": 1789463324447,
+        "at": 1789529250187,
         "currentTime": 259.986667,
         "duration": 259.986667
       },
-      "wallClockSec": 259.999,
+      "wallClockSec": 260.112,
       "monotonic": true
     },
     "phase6": {
@@ -2441,11 +2533,12 @@
       "index": 1,
       "queueLength": 456,
       "started": true,
-      "audioSrc": "http://127.0.0.1:8787/api/audio/65538?t=1789463324452",
+      "audioSrc": "http://127.0.0.1:8787/api/audio/65538?t=1789529250199",
       "loadedId": 65538,
       "paused": false,
       "ended": false,
-      "currentTime": 0.736918,
+      "stopped": false,
+      "currentTime": 0.629412,
       "duration": 250.543311,
       "readyState": 4,
       "consecutiveFailures": 0,
@@ -2453,7 +2546,7 @@
       "resolveAttempts": 11,
       "resolving": false,
       "userWantsPlayback": true,
-      "playToken": 11,
+      "playToken": 12,
       "failedIds": [
         167937,
         108557,
@@ -2929,11 +3022,33 @@
       ],
       "codexStatus": "\n          用本机 Codex 订阅，从你的红心歌曲里挑一批歌，接在当前播放之后。\n        ",
       "codexStatusClass": "status",
-      "sessionId": "s_mu2g0izb_r7xgs0",
+      "sessionId": "s_mu3j9d74_09jegb",
       "adjustments": {},
       "playId": 16,
       "feedback": {},
-      "playButtonLabel": "暂停"
+      "playButtonLabel": "暂停",
+      "prepStatus": "后台补歌：待播不足时会自动准备下一批，不打断当前歌曲。",
+      "awaitingRefill": false,
+      "pending": 454,
+      "refill": {
+        "epoch": 2,
+        "inFlight": false,
+        "attempts": 0,
+        "state": "idle",
+        "nextRetryAt": 0,
+        "lastReason": null,
+        "batches": 0,
+        "degradedBatches": 0,
+        "awaiting": false,
+        "config": {
+          "threshold": 2,
+          "batchSize": 5,
+          "backoffBaseMs": 30000,
+          "backoffMaxMs": 300000,
+          "maxAttempts": 5
+        }
+      },
+      "autoQueueIds": []
     },
     "networkTrace": [
       {
@@ -2945,183 +3060,183 @@
         "kind": "response",
         "url": "/api/resolve/65536",
         "status": 200,
-        "at": 11
+        "at": 25
       },
       {
         "kind": "request",
-        "url": "/api/audio/65536?t=1789463040084",
-        "at": 13
+        "url": "/api/audio/65536?t=1789528965137",
+        "at": 27
       },
       {
         "kind": "response",
-        "url": "/api/audio/65536?t=1789463040084",
+        "url": "/api/audio/65536?t=1789528965137",
         "status": 206,
-        "at": 54
+        "at": 432
       },
       {
         "kind": "request",
         "url": "/api/resolve/65538",
-        "at": 6588
+        "at": 7095
       },
       {
         "kind": "response",
         "url": "/api/resolve/65538",
         "status": 200,
-        "at": 6603
+        "at": 7108
       },
       {
         "kind": "request",
-        "url": "/api/audio/65538?t=1789463046676",
-        "at": 6604
+        "url": "/api/audio/65538?t=1789528972220",
+        "at": 7109
       },
       {
         "kind": "response",
-        "url": "/api/audio/65538?t=1789463046676",
+        "url": "/api/audio/65538?t=1789528972220",
         "status": 206,
-        "at": 6654
+        "at": 7269
       },
       {
         "kind": "request",
         "url": "/api/resolve/167937",
-        "at": 8107
+        "at": 8630
       },
       {
         "kind": "response",
         "url": "/api/resolve/167937",
         "status": 502,
-        "at": 8119
+        "at": 8642
       },
       {
         "kind": "request",
         "url": "/api/resolve/25638273",
-        "at": 9322
+        "at": 9852
       },
       {
         "kind": "response",
         "url": "/api/resolve/25638273",
         "status": 200,
-        "at": 9325
+        "at": 9854
       },
       {
         "kind": "request",
-        "url": "/api/audio/25638273?t=1789463049398",
-        "at": 9326
+        "url": "/api/audio/25638273?t=1789528974967",
+        "at": 9856
       },
       {
         "kind": "response",
-        "url": "/api/audio/25638273?t=1789463049398",
+        "url": "/api/audio/25638273?t=1789528974967",
         "status": 206,
-        "at": 9355
+        "at": 9985
       },
       {
         "kind": "request",
         "url": "/api/resolve/108557",
-        "at": 10855
+        "at": 11381
       },
       {
         "kind": "response",
         "url": "/api/resolve/108557",
         "status": 200,
-        "at": 11076
+        "at": 11610
       },
       {
         "kind": "request",
         "url": "/api/resolve/26584453",
-        "at": 12278
+        "at": 12817
       },
       {
         "kind": "response",
         "url": "/api/resolve/26584453",
         "status": 200,
-        "at": 12279
+        "at": 12819
       },
       {
         "kind": "request",
-        "url": "/api/audio/26584453?t=1789463052353",
-        "at": 12281
+        "url": "/api/audio/26584453?t=1789528977932",
+        "at": 12821
       },
       {
         "kind": "response",
-        "url": "/api/audio/26584453?t=1789463052353",
+        "url": "/api/audio/26584453?t=1789528977932",
         "status": 206,
-        "at": 12335
+        "at": 12900
       },
       {
         "kind": "request",
         "url": "/api/resolve/145424",
-        "at": 13790
+        "at": 14331
       },
       {
         "kind": "response",
         "url": "/api/resolve/145424",
         "status": 502,
-        "at": 13801
+        "at": 14342
       },
       {
         "kind": "request",
         "url": "/api/resolve/28403111",
-        "at": 15003
+        "at": 15549
       },
       {
         "kind": "response",
         "url": "/api/resolve/28403111",
         "status": 502,
-        "at": 15005
+        "at": 15552
       },
       {
         "kind": "request",
         "url": "/api/resolve/521749251",
-        "at": 16208
+        "at": 16764
       },
       {
         "kind": "response",
         "url": "/api/resolve/521749251",
         "status": 502,
-        "at": 16209
+        "at": 16767
       },
       {
         "kind": "request",
         "url": "/api/resolve/65536",
-        "at": 24253
+        "at": 24882
       },
       {
         "kind": "response",
         "url": "/api/resolve/65536",
         "status": 200,
-        "at": 24268
+        "at": 24891
       },
       {
         "kind": "request",
-        "url": "/api/audio/65536?t=1789463064342",
-        "at": 24269
+        "url": "/api/audio/65536?t=1789528990003",
+        "at": 24892
       },
       {
         "kind": "response",
-        "url": "/api/audio/65536?t=1789463064342",
+        "url": "/api/audio/65536?t=1789528990003",
         "status": 206,
-        "at": 24297
+        "at": 24969
       },
       {
         "kind": "request",
         "url": "/api/resolve/65538",
-        "at": 284386
+        "at": 285085
       },
       {
         "kind": "response",
         "url": "/api/resolve/65538",
         "status": 200,
-        "at": 284387
+        "at": 285088
       },
       {
         "kind": "request",
-        "url": "/api/audio/65538?t=1789463324452",
-        "at": 284387
+        "url": "/api/audio/65538?t=1789529250199",
+        "at": 285088
       },
       {
         "kind": "response",
-        "url": "/api/audio/65538?t=1789463324452",
+        "url": "/api/audio/65538?t=1789529250199",
         "status": 206,
-        "at": 284432
+        "at": 285215
       }
     ]
   },

@@ -28,6 +28,7 @@ const el = {
   clearPlan: document.getElementById('clearPlan'),
   codexStatus: document.getElementById('codexStatus'),
   codexPicks: document.getElementById('codexPicks'),
+  prep: document.getElementById('prepStatus'),
 }
 
 const MAX_CONSECUTIVE_FAILURES = 3
@@ -52,6 +53,7 @@ const state = {
   adjustments: {},
   playId: null,
   feedback: new Map(), // trackId -> 'like' | 'dislike'
+  awaitingRefill: false, // 队列播完、正在等后台补充的下一批
 }
 
 // 播放意图的代次号：每一次新的播放/暂停/切歌意图都自增，
@@ -59,6 +61,106 @@ const state = {
 let playToken = 0
 // 用户当前是否希望出声。加载中点暂停后，晚到的解析结果不能把播放重新拉起来。
 let userWantsPlayback = false
+
+/* ---------- 后台补歌编排（队列、补歌、意图、退避收敛在这里） ---------- */
+
+function pendingCount() {
+  return Math.max(0, state.queue.length - state.index - 1)
+}
+
+function getRefillContext() {
+  return {
+    sessionId: state.sessionId,
+    playing: userWantsPlayback,
+    stopped: state.stopped,
+    pending: pendingCount(),
+    brief: (el.brief && el.brief.value ? el.brief.value.trim() : '') || '继续按我的口味接着放',
+  }
+}
+
+/** 新增队列要排除：当前曲、已排队曲、已失败曲。 */
+function getRefillExclusion() {
+  const ids = new Set()
+  if (state.current) ids.add(Number(state.current.id))
+  for (let i = state.index + 1; i < state.queue.length; i += 1) ids.add(Number(state.queue[i].id))
+  for (const id of state.failedIds) ids.add(Number(id))
+  return [...ids].filter((n) => Number.isFinite(n))
+}
+
+function setPrepStatus(text, cls = '') {
+  if (!el.prep) return
+  el.prep.textContent = text
+  el.prep.className = 'status prep' + (cls ? ' ' + cls : '')
+}
+
+/** 只追加、不替换；去重掉已经在队列或已失败的曲目。 */
+function appendPicks(picks) {
+  const known = new Set(state.queue.map((t) => Number(t.id)))
+  const added = []
+  for (const p of picks) {
+    const id = Number(p.id)
+    if (!Number.isFinite(id) || known.has(id) || state.failedIds.has(id)) continue
+    known.add(id)
+    added.push({ ...p, type: p.type || 'track', auto: true })
+  }
+  if (added.length) {
+    state.queue = state.queue.concat(added)
+    renderTracks()
+    updateControls()
+    el.counter.textContent = `${state.index + 1} / ${state.queue.length} · ${state.sourceLabel}`
+  }
+  return added
+}
+
+const refillController = new RadioOrchestrator.RefillController({
+  requestBatch: async ({ epoch, excludeIds, brief, sessionId }) => {
+    const res = await fetch('/api/queue/refill', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: sessionId || state.sessionId,
+        epoch,
+        excludeIds,
+        count: refillController.config.batchSize,
+        brief,
+      }),
+    })
+    const data = await res.json().catch(() => ({}))
+    return { ...data, ok: Boolean(res.ok && data.ok), status: res.status }
+  },
+  getContext: getRefillContext,
+  getExclusion: getRefillExclusion,
+  onStatus: setPrepStatus,
+  onBatch: (picks, res) => {
+    const added = appendPicks(picks)
+    if (res.degraded) {
+      setPrepStatus(`Codex 暂不可用，已用曲库候选降级续播 ${added.length} 首（不打断当前歌曲）。`, 'warn')
+    } else {
+      setPrepStatus(`已后台补充 ${added.length} 首（Codex 选歌），不打断当前歌曲。`, 'ok')
+    }
+    // 队列刚好播完时，这一批到达后就接着放，而不是停在末尾
+    if (state.awaitingRefill && userWantsPlayback && !state.stopped) {
+      state.awaitingRefill = false
+      playIndex(state.index + 1)
+    }
+  },
+})
+
+/** 补歌参数来自本地设置，默认值见 server/db.js。 */
+async function loadRefillSettings() {
+  try {
+    const res = await fetch('/api/settings')
+    const data = await res.json()
+    const s = data.settings || {}
+    refillController.setConfig({
+      threshold: s.refillThreshold,
+      batchSize: s.refillBatchSize,
+      backoffBaseMs: s.refillBackoffBaseMs,
+      backoffMaxMs: s.refillBackoffMaxMs,
+      maxAttempts: s.refillMaxAttempts,
+    })
+  } catch (_) {}
+}
 
 // 给自动化验证读取的只读快照。
 window.__radio = {
@@ -73,6 +175,7 @@ window.__radio = {
       loadedId: loadedSrcId(),
       paused: audio.paused,
       ended: audio.ended,
+      stopped: state.stopped,
       currentTime: audio.currentTime,
       duration: audio.duration,
       readyState: audio.readyState,
@@ -95,7 +198,40 @@ window.__radio = {
       playId: state.playId,
       feedback: Object.fromEntries(state.feedback),
       playButtonLabel: el.play.textContent,
+      prepStatus: el.prep ? el.prep.textContent : '',
+      awaitingRefill: state.awaitingRefill,
+      pending: pendingCount(),
+      refill: refillController.snapshot(),
+      autoQueueIds: state.queue.filter((t) => t.auto).map((t) => t.id),
     }
+  },
+}
+
+// 测试专用钩子：只用于构造可控队列/读取编排状态，不改变生产路径。
+window.__radio.__test = {
+  replaceQueue(tracks) {
+    selectSource('test', '测试队列', tracks)
+  },
+  setConfig(cfg) {
+    return refillController.setConfig(cfg)
+  },
+  config() {
+    return { ...refillController.config }
+  },
+  refill() {
+    return refillController.check({ force: true })
+  },
+  refillState() {
+    return refillController.snapshot()
+  },
+  pending() {
+    return pendingCount()
+  },
+  /** 加速跨批验证：把当前曲目拉到接近结尾，触发真实的 ended 事件。 */
+  seekToEnd() {
+    if (!Number.isFinite(audio.duration) || audio.duration <= 0) return false
+    audio.currentTime = Math.max(0, audio.duration - 0.35)
+    return true
   },
 }
 
@@ -180,7 +316,14 @@ function escapeHtml(s) {
 }
 
 function selectSource(key, label, tracks) {
-  state.queue = tracks.filter((t) => t.id)
+  // 切来源 = 新的编排意图：作废在途补歌结果，并停掉还在放的旧音频，避免“界面换了、声音没换”
+  refillController.cancel('source_changed', { reset: true })
+  playToken += 1
+  userWantsPlayback = false
+  state.resolving = false
+  if (!audio.paused) audio.pause()
+  state.awaitingRefill = false
+  state.queue = tracks.filter((t) => t.id).map((t) => ({ ...t, type: t.type || 'track' }))
   state.sourceLabel = label
   state.index = -1
   state.current = null
@@ -213,6 +356,7 @@ function markCurrent() {
     row.classList.toggle('codex', state.codexPicks.some((p) => p.id === id))
     row.classList.toggle('liked', state.feedback.get(id) === 'like')
     row.classList.toggle('disliked', state.feedback.get(id) === 'dislike')
+    row.classList.toggle('auto', Boolean(state.queue.find((t) => Number(t.id) === id && t.auto)))
   })
   updateFeedbackButtons()
 }
@@ -247,8 +391,25 @@ async function playIndex(index, { userGesture = false } = {}) {
   if (state.stopped && !userGesture) return
   if (userGesture) {
     state.stopped = false
+    state.awaitingRefill = false
     state.consecutiveFailures = 0
+    // 用户动作可以从「等待恢复」里把补歌重新拉起来
+    refillController.resume()
   }
+
+  const queued = state.queue[index]
+  if (queued && queued.type && queued.type !== 'track') {
+    // 统一编排接口为将来的播报留位；播报未实现，明确跳过而不是假装能播
+    setStatus(`队列里的「${queued.type}」类型内容暂未实现，已跳过。`, 'warn')
+    state.index = index
+    return playIndex(index + 1, { userGesture: true })
+  }
+
+  // 切到新一首前先结束上一条播放记录，并确保有会话。
+  // 否则直接点曲目切歌时 playId 没清空，notePlayStart 会跳过，拿不到新会话，
+  // 服务端会话失效后补歌就会因此停住。
+  closePlay('replaced')
+  if (!state.sessionId) await ensureSession()
 
   // 取一个代次号；并发切歌时只有最后一次意图对应的结果允许生效
   const token = ++playToken
@@ -324,6 +485,8 @@ function handleTrackFailure(track, reason, index) {
   if (state.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
     state.stopped = true
     userWantsPlayback = false
+    // 连续失败时连后台补歌一起停下，避免一边失败一边继续消耗额度
+    refillController.cancel('playback_failed', { reset: true })
     setStatus(
       `连续 ${state.consecutiveFailures} 首无法播放，已停止自动换歌。最后一次原因：${reason}。请检查登录状态或稍后再试。`,
       'bad',
@@ -332,6 +495,8 @@ function handleTrackFailure(track, reason, index) {
     return
   }
   setStatus(`「${track.name}」失败：${reason} → ${RETRY_DELAY_MS / 1000}s 后自动换下一首`, 'warn')
+  // 失败会让待播变少，顺便看看需不需要补歌
+  refillController.check()
   const timerToken = playToken
   setTimeout(() => {
     // 退避期间用户可能已经手动选了别的歌或点了暂停：
@@ -345,7 +510,17 @@ function next({ userGesture = false } = {}) {
   if (!state.queue.length) return
   const nextIndex = state.index + 1
   if (nextIndex >= state.queue.length) {
-    setStatus('已到列表末尾。', 'warn')
+    state.consecutiveFailures = 0
+    state.stopped = false
+    // 队列到头但补歌还在路上/还能重试：等这一批，而不是宣告“已到末尾”
+    if (refillController.canWaitAtEnd()) {
+      state.awaitingRefill = true
+      setStatus('当前队列已播完，正在等后台补充的下一批…', 'warn')
+      refillController.check({ force: true })
+      updateControls()
+      return
+    }
+    setStatus('当前队列已播完，且后台没有可补充的候选。', 'warn')
     state.stopped = true
     userWantsPlayback = false
     updateControls()
@@ -353,6 +528,7 @@ function next({ userGesture = false } = {}) {
   }
   state.consecutiveFailures = 0
   state.stopped = false
+  state.awaitingRefill = false
   closePlay('skipped')
   playIndex(nextIndex, { userGesture })
 }
@@ -366,6 +542,9 @@ audio.addEventListener('playing', () => {
   setStatus(`播放中：${state.current.name} — ${state.current.artists}`, 'playing')
   updateControls()
   notePlayStart()
+  // 正在出声才考虑提前准备下一批；暂停时不主动发新的生成请求
+  refillController.resume()
+  refillController.check()
 })
 
 audio.addEventListener('ended', () => {
@@ -445,6 +624,10 @@ function pausePlayback() {
   state.resolving = false
   if (!audio.paused) audio.pause()
   setStatus('已暂停。')
+  // 后台补歌不因暂停而中断，但结果只会追加进队列，不会自动出声
+  if (refillController.isPreparing()) {
+    setPrepStatus('已暂停；后台仍在准备下一批，迟到结果不会自动出声。', 'warn')
+  }
   updateControls()
 }
 
@@ -511,9 +694,14 @@ function renderCodexPicks(picks) {
 
 /** 把 Codex 选出的歌接到当前播放之后；不打断正在响的那首。 */
 function applyCodexQueue(data) {
-  const picks = data.picks.map((p) => ({ ...p, fromCodex: true }))
+  // 用户主动点了「让 Codex 选歌」= 新的编排意图：旧的自动补歌任务作废
+  refillController.cancel('plan_applied', { reset: true })
+  state.awaitingRefill = false
+  const picks = data.picks.map((p) => ({ ...p, fromCodex: true, type: p.type || 'track' }))
   const current = state.current
-  state.queue = current ? [current, ...picks] : picks
+  state.queue = current
+    ? [{ ...current, type: current.type || 'track' }, ...picks]
+    : picks
   state.index = current ? 0 : -1
   state.codexPicks = picks
   state.sourceLabel = 'Codex 选歌'
@@ -523,6 +711,7 @@ function applyCodexQueue(data) {
   renderCodexPicks(picks)
   updateControls()
   el.counter.textContent = `${current ? 1 : 0} / ${state.queue.length} · ${state.sourceLabel}`
+  refillController.check()
 }
 
 async function requestPlan() {
@@ -578,6 +767,7 @@ async function ensureSession() {
       state.adjustments = data.session.adjustments || {}
       renderSession()
       updateControls()
+      refillController.sessionReady()
     }
   } catch (_) {}
   return state.sessionId
@@ -587,6 +777,9 @@ async function stopSession() {
   playToken += 1
   userWantsPlayback = false
   state.resolving = false
+  state.awaitingRefill = false
+  // 停止 = 作废旧意图：在途补歌结果作废，也不会落到下一次会话
+  refillController.cancel('stopped', { reset: true })
   if (!audio.paused) audio.pause()
   await closePlay('stopped')
   try {
@@ -595,6 +788,7 @@ async function stopSession() {
   state.sessionId = null
   state.adjustments = {}
   setStatus('已停止收听。下次开播会建立新的收听会话。')
+  setPrepStatus('已停止；后台补歌已取消。', '')
   renderSession()
   updateControls()
 }
@@ -630,6 +824,8 @@ async function notePlayStart() {
       state.sessionId = data.session.id
       renderSession()
       updateControls()
+      // 会话建立后再触发一次：有些入口（点曲目直接播放）先出声、后拿到会话
+      refillController.sessionReady()
     }
   } catch (_) {}
 }
@@ -654,8 +850,7 @@ async function reattachSession() {
       state.sessionId = data.session.id
       state.adjustments = data.session.adjustments || {}
       setStatus('已连上正在进行的收听会话，点“继续”接着听。')
-    }
-  } catch (_) {}
+    }  } catch (_) {}
   renderSession()
   updateControls()
 }
@@ -727,5 +922,6 @@ el.stop.onclick = stopSession
 
 loadLibrary()
 loadFeedback()
+loadRefillSettings()
 reattachSession()
 updateControls()

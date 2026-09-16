@@ -11,6 +11,7 @@ const { URL } = require('url')
 const ncm = require('./netease')
 const codex = require('./codex')
 const db = require('./db')
+const orchestrator = require('./orchestrator')
 
 const PORT = Number(process.env.PORT || 8787)
 const HOST = process.env.HOST || '127.0.0.1'
@@ -22,6 +23,9 @@ let injectResolveFailures = 0
 // 故障注入开关：让接下来的 N 次 /api/audio 请求返回 502，
 // 用于验证“播放中途音源失效 → 刷新地址”这条链路。
 let injectAudioFailures = 0
+// 故障注入开关：让接下来的 N 次补歌请求直接返回指定错误，
+// 用于验证网页对候选不足/服务不可用的状态提示与有界重试。
+let forcedRefillError = null
 
 db.init()
 // 服务重启后，上一条开着但已无心跳的会话不再算进行中；网页刷新只会连上当前会话
@@ -173,46 +177,6 @@ async function getLikedTracksCached(session) {
   return tracks
 }
 
-/** 从真实红心歌曲里抽样做候选：
- *  - 显式反馈加权：喜欢提高权重，不喜欢降低权重（不封禁）
- *  - 最近播过的歌降权，避免短时间重复
- *  用带权不放回抽样，参数都不是硬编码。
- */
-function sampleCandidates(tracks, n) {
-  const feedback = db.activeFeedbackMap()
-  const likeBoost = db.getNumberSetting('feedbackLikeBoost', 2)
-  const dislikePenalty = db.getNumberSetting('feedbackDislikePenalty', 0.1)
-  const avoidWindowMs = db.getNumberSetting('avoidRepeatWindowMin', 45) * 60 * 1000
-  const recent = avoidWindowMs > 0 ? new Set(db.recentlyPlayedIds(avoidWindowMs)) : new Set()
-
-  const pool = tracks.map((t) => {
-    let weight = 1
-    const sentiment = feedback.get(Number(t.id))
-    if (sentiment === 'like') weight *= likeBoost
-    if (sentiment === 'dislike') weight *= dislikePenalty
-    if (recent.has(Number(t.id))) weight *= 0.2
-    return { track: t, weight: Math.max(weight, 0.001) }
-  })
-
-  const want = Math.max(1, Math.min(n, pool.length))
-  const picked = []
-  for (let i = 0; i < want && pool.length; i += 1) {
-    const total = pool.reduce((a, x) => a + x.weight, 0)
-    let r = Math.random() * total
-    let idx = 0
-    for (let j = 0; j < pool.length; j += 1) {
-      r -= pool[j].weight
-      if (r <= 0) {
-        idx = j
-        break
-      }
-    }
-    picked.push(pool[idx].track)
-    pool.splice(idx, 1)
-  }
-  return picked
-}
-
 /* ---------- 路由 ---------- */
 
 const server = http.createServer(async (req, res) => {
@@ -329,13 +293,20 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, pendingUnplayable: pending })
     }
 
+    if (p === '/api/_test/resolve-error-next' && TEST_HOOKS) {
+      // 模拟“音源接口整体报错”，用于验证音乐服务不可用时的降级与退避
+      const body = await readBody(req)
+      const pending = ncm.setInjectedResolveErrors(Number(body.count ?? 1))
+      return sendJson(res, 200, { ok: true, pendingResolveErrors: pending })
+    }
+
     if (p === '/api/plan' && req.method === 'POST') {
       const body = await readBody(req)
       const session = ncm.loadSession()
       if (!session) return sendJson(res, 401, { ok: false, code: 'NOT_LOGGED_IN', message: '未登录' })
 
       const library = await getLikedTracksCached(session)
-      const candidates = sampleCandidates(
+      const candidates = orchestrator.sampleCandidates(
         library,
         Number(body.candidateCount) || db.getNumberSetting('candidateCount', 60),
       )
@@ -358,19 +329,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       // 模型给的 id 只算候选，必须再过一遍账号可播性才允许进入队列
-      const checked = []
-      for (const pick of result.picks) {
-        let playable = false
-        let kind = 'error'
-        try {
-          const info = await ncm.resolveTrack(pick.id)
-          kind = info.kind
-          playable = info.kind === 'full'
-        } catch (_) {
-          kind = 'error'
-        }
-        checked.push({ ...pick, kind, playable })
-      }
+      const checked = await orchestrator.checkPlayable(result.picks)
       const playable = checked.filter((c) => c.playable)
       if (!playable.length) {
         return sendJson(res, 502, {
@@ -398,14 +357,85 @@ const server = http.createServer(async (req, res) => {
       if (!session) return sendJson(res, 401, { ok: false, code: 'NOT_LOGGED_IN' })
       const library = await getLikedTracksCached(session)
       const n = Number(url.searchParams.get('n')) || 20
-      const picked = sampleCandidates(library, n)
+      const picked = orchestrator.sampleCandidates(library, n)
       return sendJson(res, 200, { ok: true, ids: picked.map((t) => t.id), librarySize: library.length })
     }
 
     if (p === '/api/_test/codex-mode' && TEST_HOOKS) {
       const body = await readBody(req)
-      const mode = codex.setCodexMode(body.mode)
-      return sendJson(res, 200, { ok: true, mode })
+      const mode = codex.setCodexMode(body.mode, { delayMs: body.delayMs })
+      return sendJson(res, 200, { ok: true, mode, stats: codex.getStats() })
+    }
+
+    if (p === '/api/_test/codex-stats' && TEST_HOOKS) {
+      if (url.searchParams.get('reset') === '1') codex.resetStats()
+      return sendJson(res, 200, { ok: true, stats: codex.getStats() })
+    }
+
+    if (p === '/api/_test/orchestrator-state' && TEST_HOOKS) {
+      return sendJson(res, 200, { ok: true, inflight: orchestrator.inflightInfo() })
+    }
+
+    if (p === '/api/_test/clear-url-cache' && TEST_HOOKS) {
+      ncm.clearUrlCache()
+      return sendJson(res, 200, { ok: true })
+    }
+
+    if (p === '/api/_test/refill-forced' && TEST_HOOKS) {
+      const body = await readBody(req)
+      const count = Number(body.count ?? 1)
+      forcedRefillError =
+        count > 0
+          ? { code: body.code || 'candidates_exhausted', message: body.message || '（测试注入）补歌失败', remaining: count }
+          : null
+      return sendJson(res, 200, { ok: true, forced: forcedRefillError })
+    }
+
+    if (p === '/api/queue/refill' && req.method === 'POST') {
+      const body = await readBody(req)
+
+      if (forcedRefillError && forcedRefillError.remaining > 0) {
+        forcedRefillError.remaining -= 1
+        const code = forcedRefillError.code
+        const status = code === 'candidates_exhausted' || code === 'session_ended' ? 409 : code === 'music_unavailable' ? 503 : 502
+        return sendJson(res, status, { ok: false, code, message: forcedRefillError.message })
+      }
+
+      const session = ncm.loadSession()
+      if (!session) return sendJson(res, 401, { ok: false, code: 'NOT_LOGGED_IN', message: '未登录' })
+
+      let library
+      try {
+        library = await getLikedTracksCached(session)
+      } catch (err) {
+        return sendJson(res, 503, {
+          ok: false,
+          code: 'library_unavailable',
+          message: '读取红心歌曲失败，暂时无法补歌：' + err.message,
+        })
+      }
+
+      const result = await orchestrator.prepareBatch({
+        library,
+        sessionId: typeof body.sessionId === 'string' ? body.sessionId : null,
+        epoch: Number(body.epoch) || 0,
+        excludeIds: Array.isArray(body.excludeIds) ? body.excludeIds : [],
+        count: Number(body.count) || db.getNumberSetting('refillBatchSize', 5),
+        brief: typeof body.brief === 'string' ? body.brief.slice(0, 200) : '',
+        timeoutMs: Number(body.timeoutMs) || undefined,
+        skipCodex: Boolean(body.skipCodex),
+      })
+
+      if (result.ok) return sendJson(res, 200, result)
+      const status =
+        result.code === 'session_ended'
+          ? 409
+          : result.code === 'candidates_exhausted'
+            ? 409
+            : result.code === 'music_unavailable' || result.code === 'library_unavailable'
+              ? 503
+              : 502
+      return sendJson(res, status, result)
     }
 
     if (p === '/api/session' && req.method === 'GET') {
@@ -422,7 +452,10 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/session/stop' && req.method === 'POST') {
+      const open = db.getOpenSession()
       const ended = db.endSession('stopped')
+      // 停止后旧补歌结果必须作废，不能污染下一次会话
+      if (open) orchestrator.invalidateSession(open.id)
       return sendJson(res, 200, { ok: true, ...ended })
     }
 

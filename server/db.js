@@ -23,6 +23,14 @@ const DEFAULT_SETTINGS = {
   feedbackLikeBoost: '2.0', // 喜欢的候选权重倍数
   feedbackDislikePenalty: '0.1', // 不喜欢的候选权重倍数（降低而不封禁）
   avoidRepeatWindowMin: '45', // 这段时间内播过的歌在选歌时降权
+  // —— 自动补歌参数（默认值依据见 .scratch/radio-agent/verification/report.md）——
+  refillThreshold: '2', // 待播剩多少首开始后台补歌
+  refillBatchSize: '5', // 每批补多少首
+  refillBackoffBaseMs: '30000', // 补歌失败后的首次重试间隔（指数退避起点）
+  refillBackoffMaxMs: '300000', // 退避上限
+  refillMaxAttempts: '5', // 同一轮失败最多自动重试几次，之后等待用户动作
+  codexFailureCooldownMs: '60000', // Codex 失败后跳过订阅、改用曲库候选的冷却起点
+  codexFailureCooldownMaxMs: '900000', // 冷却上限
 }
 
 function init() {

@@ -14,7 +14,8 @@
     "verify:playback": "node scripts/verify-playback.mjs",
     "verify:fixes": "node scripts/verify-fixes.mjs",
     "verify:codex": "node scripts/verify-codex.mjs",
-    "verify:session": "node scripts/verify-session.mjs"
+    "verify:session": "node scripts/verify-session.mjs",
+    "verify:orchestration": "node scripts/verify-orchestration.mjs"
   },
   "repository": {
     "type": "git",
