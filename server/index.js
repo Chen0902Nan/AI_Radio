@@ -12,6 +12,9 @@ const ncm = require('./netease')
 const codex = require('./codex')
 const db = require('./db')
 const orchestrator = require('./orchestrator')
+const { createDjPipeline } = require('./dj-pipeline')
+const fish = require('./fish')
+const djScript = require('./dj-script')
 
 const PORT = Number(process.env.PORT || 8787)
 const HOST = process.env.HOST || '127.0.0.1'
@@ -37,6 +40,60 @@ try {
   if (closed.closed) console.log(`[radio] 已收尾上次未结束的会话 ${closed.id}`)
 } catch (err) {
   console.error('[radio] 收尾旧会话失败：', err.message)
+}
+
+/**
+ * DJ 串场准备流水线（任务 05）：文案/语音/缓存依赖已内置默认实现，
+ * 这里只接真实配置来源与目标音源校验。密钥只在本进程使用，不入库、不下发前端。
+ */
+const djPipeline = createDjPipeline({
+  settings: () => {
+    const s = db.listSettings()
+    return {
+      djVoiceReferenceId: (s.djVoiceReferenceId || '').trim() || null,
+      fishModel: s.fishModel || undefined,
+    }
+  },
+  // 目标歌曲完整音源校验：复用网易云解析（结果 kind: full/trial/unplayable）
+  resolveTarget: async (trackId) => {
+    try {
+      return await ncm.resolveTrack(trackId)
+    } catch (err) {
+      return { kind: 'unplayable', message: err.message }
+    }
+  },
+})
+
+/** 同源提供已完成的 DJ 音频；支持 Range，拒绝任意外部资产。 */
+function serveDjAudio(req, res, assetId) {
+  const filePath = djPipeline.assetPath(assetId)
+  if (!filePath) {
+    sendJson(res, 404, { code: 'asset_not_found', message: '音频不存在或已过期' })
+    return
+  }
+  const stat = fs.statSync(filePath)
+  const total = stat.size
+  const base = { 'content-type': 'audio/mpeg', 'accept-ranges': 'bytes', 'cache-control': 'no-store' }
+  const range = req.headers.range
+  if (range) {
+    const m = String(range).match(/bytes=(\d*)-(\d*)/)
+    const start = m && m[1] ? Number(m[1]) : 0
+    const end = m && m[2] ? Math.min(Number(m[2]), total - 1) : total - 1
+    if (!Number.isFinite(start) || start > end || start >= total) {
+      res.writeHead(416, { 'content-range': `bytes */${total}` })
+      res.end()
+      return
+    }
+    res.writeHead(206, {
+      ...base,
+      'content-range': `bytes ${start}-${end}/${total}`,
+      'content-length': end - start + 1,
+    })
+    fs.createReadStream(filePath, { start, end }).pipe(res)
+    return
+  }
+  res.writeHead(200, { ...base, 'content-length': total })
+  fs.createReadStream(filePath).pipe(res)
 }
 
 const MIME = {
@@ -370,6 +427,18 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, mode, stats: codex.getStats() })
     }
 
+    if (p === '/api/_test/fish-mode' && TEST_HOOKS) {
+      const body = await readBody(req)
+      const mode = fish.setFishMode(body.mode, { delayMs: body.delayMs })
+      return sendJson(res, 200, { ok: true, mode })
+    }
+
+    if (p === '/api/_test/dj-script-mode' && TEST_HOOKS) {
+      const body = await readBody(req)
+      const mode = djScript.setDjScriptMode(body.mode, { delayMs: body.delayMs })
+      return sendJson(res, 200, { ok: true, mode, stats: djScript.getStats() })
+    }
+
     if (p === '/api/_test/codex-stats' && TEST_HOOKS) {
       if (url.searchParams.get('reset') === '1') codex.resetStats()
       return sendJson(res, 200, { ok: true, stats: codex.getStats() })
@@ -500,11 +569,64 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, session: db.startSession() })
     }
 
+    if (p === '/api/dj/prepare' && req.method === 'POST') {
+      const body = await readBody(req)
+      const r = await djPipeline.prepare(body)
+      if (!r.ok) {
+        const status =
+          r.code === 'invalid_request'
+            ? 400
+            : r.code === 'payload_conflict'
+              ? 409
+              : r.code === 'cooldown_active' || r.code.endsWith('_blocked')
+                ? 429
+                : 502
+        return sendJson(res, status, r)
+      }
+      return sendJson(res, 200, r)
+    }
+
+    if (p.startsWith('/api/dj/jobs/') && p.endsWith('/cancel') && req.method === 'POST') {
+      const id = p.split('/')[4]
+      const r = await djPipeline.cancel(id)
+      return sendJson(res, 200, r)
+    }
+
+    if (p.startsWith('/api/dj/jobs/') && req.method === 'GET') {
+      const id = p.split('/')[4]
+      const r = djPipeline.job(id)
+      if (!r.ok) return sendJson(res, 404, r)
+      return sendJson(res, 200, r)
+    }
+
+    if (p.startsWith('/api/dj/audio/')) {
+      const assetId = p.split('/').pop()
+      return serveDjAudio(req, res, assetId)
+    }
+
+    if (p === '/api/dj/preview' && req.method === 'POST') {
+      const body = await readBody(req)
+      // 仅在停止收听时允许试听，避免打断节目（契约第 6 节）
+      if (db.getOpenSession()) {
+        return sendJson(res, 409, { ok: false, code: 'session_active', message: '停止收听后才能试听音色' })
+      }
+      const r = await djPipeline.preview({
+        referenceId: typeof body.referenceId === 'string' ? body.referenceId.trim() : '',
+      })
+      if (!r.ok) {
+        const status = r.code === 'not_configured' ? 409 : r.code === 'auth' ? 401 : r.code === 'rate_limited' ? 429 : 502
+        return sendJson(res, status, r)
+      }
+      return sendJson(res, 200, r)
+    }
+
     if (p === '/api/session/stop' && req.method === 'POST') {
       const open = db.getOpenSession()
       const ended = db.endSession('stopped')
       // 停止后旧补歌结果必须作废，不能污染下一次会话
       if (open) orchestrator.invalidateSession(open.id)
+      // DJ 准备任务同样随会话失效
+      if (open) djPipeline.invalidateSession(open.id)
       return sendJson(res, 200, { ok: true, ...ended })
     }
 
@@ -552,14 +674,16 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/settings' && req.method === 'GET') {
-      return sendJson(res, 200, { ok: true, settings: db.listSettings() })
+      return sendJson(res, 200, { ok: true, settings: db.listSettings(), djVoice: djPipeline.configuration() })
     }
 
     if (p === '/api/settings' && req.method === 'POST') {
       const body = await readBody(req)
       if (!body.key) return sendJson(res, 400, { ok: false, message: '缺少 key' })
       const saved = db.setSetting(String(body.key), body.value)
-      return sendJson(res, 200, { ok: true, setting: saved, settings: db.listSettings() })
+      // 语音相关配置更新后解除流水线的配置/认证阻塞
+      djPipeline.voiceConfigChanged()
+      return sendJson(res, 200, { ok: true, setting: saved, settings: db.listSettings(), djVoice: djPipeline.configuration() })
     }
 
     if (p === '/api/plays/start' && req.method === 'POST') {

@@ -1,0 +1,47 @@
+{
+  "ok": true,
+  "durationMs": 52301,
+  "storyStatus": "sourced",
+  "scriptText": "有乐迷在批踢踢论坛分享过一种听法：把《晴天》配上动画《言叶之庭》，觉得画面和剧情都与歌词格外合拍。这是乐迷的感受。接下来，听周杰伦的《晴天》，也让你记忆里的画面，跟着旋律慢慢浮现。",
+  "claims": [
+    {
+      "id": "c1",
+      "text": "批踢踢网友推荐《言叶之庭》搭配《晴天》的剪辑，认为画面和剧情与歌词高度契合。",
+      "kind": "unverified_account",
+      "sourceIds": [
+        "s1"
+      ],
+      "spokenAttribution": "有乐迷在批踢踢论坛分享过一种听法：把《晴天》配上动画《言叶之庭》，觉得画面和剧情都与歌词格外合拍。"
+    },
+    {
+      "id": "c2",
+      "text": "歌曲《晴天》的演唱者是周杰伦。",
+      "kind": "documented",
+      "sourceIds": [
+        "s1"
+      ],
+      "spokenAttribution": ""
+    }
+  ],
+  "sources": [
+    {
+      "id": "s1",
+      "url": "https://www.ptt.cc/man/C_Chat/DE98/DFF5/DC78/M.1552770844.A.A40.html",
+      "title": "言葉之庭 搭配 周杰倫 - 晴天 (mad)",
+      "publisherOrAuthor": "批踢踢实业坊 C_Chat 板／t0584224",
+      "evidence": "帖子发表于2016年10月12日，推荐《言叶之庭》搭配周杰伦《晴天》的剪辑，认为同步率很高，画面、剧情都与歌词相关；另有回帖表示两者意外地搭。",
+      "retrievedAt": "2026-09-16"
+    }
+  ],
+  "searchActivity": {
+    "searchEvents": 6,
+    "urls": [
+      "https://www.decode.org.tw/forum/read.php?317,20492",
+      "https://www.ptt.cc/man/C_Chat/DE98/DFF5/DC78/M.1552770844.A.A40.html"
+    ],
+    "querySample": [
+      "周杰伦 晴天 歌词 解读 乐迷 论坛 ...",
+      "https://www.decode.org.tw/forum/read.php?317,20492"
+    ]
+  }
+}

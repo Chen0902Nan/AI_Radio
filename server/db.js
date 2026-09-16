@@ -31,6 +31,11 @@ const DEFAULT_SETTINGS = {
   refillMaxAttempts: '5', // 同一轮失败最多自动重试几次，之后等待用户动作
   codexFailureCooldownMs: '60000', // Codex 失败后跳过订阅、改用曲库候选的冷却起点
   codexFailureCooldownMaxMs: '900000', // 冷却上限
+  // —— DJ 串场（Q9 确认基线；密钥只来自服务启动环境，不入库）——
+  djEnabled: 'true', // 关闭后继续纯音乐
+  djIntervalTracks: '4', // 每自然播完几首安排一次，可选 3/4/5
+  djVoiceReferenceId: '', // 任务 07 试听后由用户选定；空 = 语音不可用
+  fishModel: 's2.1-pro-free', // 固定免费模型；配置成其他值会被拒绝，不回落付费
 }
 
 function init() {

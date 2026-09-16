@@ -1,0 +1,38 @@
+{
+  "ok": true,
+  "durationMs": 36248,
+  "storyStatus": "sourced",
+  "scriptText": "夜深了，把音量放轻一点。接下来这首《晴天》，作词、作曲和编曲都由周杰伦自己完成。今晚，就让这首歌陪你安静地待一会儿。如果想起了某个人，也不用急着把回忆收好。一起听，周杰伦的《晴天》。",
+  "scriptChars": 91,
+  "claims": [
+    {
+      "id": "c1",
+      "text": "《晴天》由周杰伦演唱，作词、作曲和编曲均由周杰伦完成。",
+      "kind": "documented",
+      "sourceIds": [
+        "s1"
+      ],
+      "spokenAttribution": ""
+    }
+  ],
+  "sources": [
+    {
+      "id": "s1",
+      "url": "https://music-tw.line.me/track/1018299003",
+      "title": "晴天 - 周杰倫 Jay Chou - 葉惠美專輯",
+      "publisherOrAuthor": "LINE MUSIC",
+      "evidence": "歌曲页面署名：词曲为周杰伦，编曲为周杰伦，演唱为周杰伦。",
+      "retrievedAt": "2026-09-16"
+    }
+  ],
+  "searchActivity": {
+    "searchEvents": 4,
+    "urls": [
+      "https://music-tw.line.me/track/1018299003"
+    ],
+    "querySample": [
+      "周杰伦 晴天 叶惠美 创作 自己 回忆",
+      "https://music-tw.line.me/track/1018299003"
+    ]
+  }
+}

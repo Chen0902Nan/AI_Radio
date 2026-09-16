@@ -3,3 +3,6 @@ data/
 .scratch/radio-agent/verification/logs/
 .DS_Store
 *.log
+.env
+.env.*
+!.env.example

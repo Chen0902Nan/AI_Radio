@@ -310,6 +310,9 @@ module.exports = {
   getCodexMode,
   getStats,
   resetStats,
+  // 供 DJ 文案模块复用同一套子进程执行与失败分类（任务 02）
+  execWithTimeout,
+  classifyFailure,
   CODEX_BIN,
   DEFAULT_TIMEOUT_MS,
 }

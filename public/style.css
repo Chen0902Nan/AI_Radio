@@ -142,3 +142,32 @@ button.ghost { background: transparent; font-size: 13px; padding: 5px 12px; }
 .qr img { display: block; width: 100%; }
 .back { display: inline-block; margin-top: 18px; color: var(--accent); text-decoration: none; font-size: 13px; }
 code { background: var(--panel-2); padding: 1px 5px; border-radius: 5px; font-size: 12px; }
+
+/* ---------- DJ 串场 ---------- */
+section.dj {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 18px 20px; margin-bottom: 22px;
+}
+.dj-controls { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--dim); }
+.dj-controls label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.dj-controls select {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+  border-radius: 6px; padding: 2px 6px; font-size: 12px;
+}
+.segue-info {
+  margin-top: 12px; background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 12px 14px;
+}
+.segue-head { font-size: 12px; color: var(--accent); margin-bottom: 8px; }
+.segue-script { font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
+.segue-sources { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; }
+.segue-sources .src-link { color: var(--accent); text-decoration: none; border-bottom: 1px dashed #3b4a7a; }
+.segue-sources .src-link:hover { border-bottom-style: solid; }
+.segue-sources .src-none { color: #6f7688; }
+.dj-preview { margin-top: 12px; display: flex; gap: 8px; align-items: center; }
+.dj-preview input {
+  flex: 1; background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: 8px; padding: 7px 10px; font-size: 13px;
+}
+.dj-preview input::placeholder { color: #6f7688; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }

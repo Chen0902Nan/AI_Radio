@@ -63,6 +63,34 @@
         <div id="codexPicks" class="picks"></div>
       </section>
 
+      <section class="dj">
+        <div class="lib-head">
+          <h2>DJ 串场</h2>
+          <span class="dj-controls">
+            <label class="dj-toggle"><input type="checkbox" id="djEnabled" /> 开启 DJ</label>
+            <label class="dj-interval">每
+              <select id="djInterval">
+                <option value="3">3</option>
+                <option value="4" selected>4</option>
+                <option value="5">5</option>
+              </select>
+              首一次
+            </label>
+          </span>
+        </div>
+        <div class="status prep" id="djStatus">DJ 串场：歌曲之间用有出处的资料介绍下一首，语音不可用时继续纯音乐。</div>
+        <div id="segueInfo" class="segue-info" hidden>
+          <div class="segue-head">DJ 串场 · 接下来：<span id="segueTarget"></span></div>
+          <div class="segue-script" id="segueScript"></div>
+          <div class="segue-sources" id="segueSources"></div>
+        </div>
+        <div class="dj-preview">
+          <input id="previewVoice" placeholder="音色 reference_id（试听用，选定后保存为正式音色）" />
+          <button id="previewSave" class="ghost" disabled>设为正式音色</button>
+          <button id="previewBtn" class="ghost">试听</button>
+        </div>
+      </section>
+
       <section class="library">
         <div class="lib-head">
           <h2>音乐资料</h2>
@@ -81,6 +109,8 @@
 
       <audio id="audio" preload="none"></audio>
     </main>
+    <script src="/program-contract.js"></script>
+    <script src="/segue-controller.js"></script>
     <script src="/orchestrator.js"></script>
     <script src="/app.js"></script>
   </body>
