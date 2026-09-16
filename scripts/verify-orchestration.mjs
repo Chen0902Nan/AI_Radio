@@ -12,7 +12,7 @@
  * 隔离：脚本自己拉起一个独立服务进程，使用临时 SQLite 文件与独立端口，
  * 不写真实反馈/设置/播放记录；只读共享 data/session.json 完成登录态。
  *
- * 用法：node scripts/verify-orchestration.mjs [--skip-real] [--headful] [--base=http://127.0.0.1:8792]
+ * 用法：node scripts/verify-orchestration.mjs [--skip-real] [--server-only] [--headful] [--base=http://127.0.0.1:8792]
  */
 import fs from 'node:fs'
 import os from 'node:os'
@@ -21,6 +21,7 @@ import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import puppeteer from 'puppeteer-core'
+import { isBatchTrackPlaying } from './lib/playback-checks.mjs'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -36,6 +37,7 @@ const args = process.argv.slice(2)
 const EXTERNAL_BASE = (args.find((a) => a.startsWith('--base=')) || '').split('=')[1]
 const HEADLESS = !args.includes('--headful')
 const SKIP_REAL = args.includes('--skip-real')
+const SERVER_ONLY = args.includes('--server-only')
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const PORT = Number(process.env.RADIO_TEST_PORT || 8792)
 const BASE = EXTERNAL_BASE || `http://127.0.0.1:${PORT}`
@@ -355,13 +357,26 @@ async function runServerChecks() {
     newer: { ok: newerResult.ok, picks: (newerResult.picks || []).length },
     codexCalls: statsOrder.calls,
   })
+  // 新任务已经完成，旧意图仍然过期，不能因为没有在途任务而重新生成。
+  const staleAfterCompletion = await post('/api/queue/refill', { sessionId: s.id, epoch: 100, excludeIds: [], count: 3 })
+  const statsAfterCompletion = (await api('/api/_test/codex-stats')).stats
+  check('服务端：新批次完成后仍拒绝旧意图，不额外消耗 Codex 调用', staleAfterCompletion.ok === false && staleAfterCompletion.code === 'superseded' && statsAfterCompletion.calls === 1, {
+    stale: { ok: staleAfterCompletion.ok, code: staleAfterCompletion.code },
+    codexCalls: statsAfterCompletion.calls,
+  })
   await post('/api/_test/codex-mode', { mode: 'success' })
+
+  const sameIntentNextBatch = await post('/api/queue/refill', { sessionId: s.id, epoch: 200, excludeIds: [], count: 3 })
+  check('服务端：同一意图在上一批完成后仍能正常准备下一批', sameIntentNextBatch.ok === true && (sameIntentNextBatch.picks || []).length > 0, {
+    ok: sameIntentNextBatch.ok,
+    picks: (sameIntentNextBatch.picks || []).length,
+  })
 
   // 排除当前与已排队；结果不重复
   const lib = await api('/api/library')
   const libIds = lib.liked.tracks.map((t) => t.id)
   const excludedFirst = libIds.slice(0, 12)
-  const excl = await post('/api/queue/refill', { sessionId: s.id, epoch: 22, excludeIds: excludedFirst, count: 5 })
+  const excl = await post('/api/queue/refill', { sessionId: s.id, epoch: 201, excludeIds: excludedFirst, count: 5 })
   const exclIds = (excl.picks || []).map((p) => p.id)
   check('服务端：候选会排除当前曲与已排队曲，且结果不重复', excl.ok && exclIds.every((id) => !excludedFirst.includes(id)) && new Set(exclIds).size === exclIds.length, {
     excluded: excludedFirst.length,
@@ -539,6 +554,24 @@ async function runBrowserChecks(tracks) {
   const natural = tracks.slice().sort((a, b) => a.durationMs - b.durationMs)[0]
   await setSettings({ refillThreshold: '1', refillBatchSize: '3' })
   await page.evaluate(() => window.__radio.__test.setConfig({ threshold: 1, batchSize: 3 }))
+  // 在开始播放前观察真实音频元素；不把曲库时长或界面切歌当作已经自然播完的证据。
+  await page.evaluate((trackId) => {
+    const a = document.querySelector('audio')
+    const trace = { trackId, start: null, end: null, seeks: [], rateChanges: [] }
+    window.__naturalPlayback = trace
+    const loadedId = () => Number((a.currentSrc || a.src).match(/\/api\/audio\/(\d+)/)?.[1])
+    const sample = () => ({
+      id: loadedId(), atMs: performance.now(), currentTime: a.currentTime,
+      duration: a.duration, playbackRate: a.playbackRate,
+    })
+    const active = () => trace.start && !trace.end && loadedId() === trackId
+    a.addEventListener('playing', () => {
+      if (!trace.start && loadedId() === trackId) trace.start = sample()
+    })
+    a.addEventListener('seeking', () => { if (active()) trace.seeks.push(sample()) })
+    a.addEventListener('ratechange', () => { if (active()) trace.rateChanges.push(sample()) })
+    a.addEventListener('ended', () => { if (active()) trace.end = sample() })
+  }, natural.id)
   await startPlaying([natural.id])
   await waitFor(async () => (await state()).queueLength > 1, { timeout: 30000, label: '后台补充第一批' })
   const afterRefill = await state()
@@ -550,17 +583,39 @@ async function runBrowserChecks(tracks) {
   await page.screenshot({ path: path.join(OUT, 'shot-09-crossbatch-prep.png') })
 
   // 不拖进度：等这首自然播完触发真实的 ended，跨批边界由此产生
-  await waitFor(
+  let previousCross = afterRefill
+  const playbackSamples = await waitFor(
     async () => {
       const s = await state()
-      return s.autoQueueIds.includes(s.currentId) && !s.paused
+      const playing = isBatchTrackPlaying(previousCross, s)
+      const samples = playing ? [previousCross, s] : false
+      previousCross = s
+      return samples
     },
     { timeout: (natural.durationMs / 1000 + 90) * 1000, interval: 1000, label: '第一首自然播完并接入补歌批次' },
   )
-  const cross = await state()
-  check('网页：第一首自然播完后自动接入后台补充的一批（没有因队列耗尽停止）', cross.autoQueueIds.includes(cross.currentId) && cross.paused === false && cross.stopped === false, {
+  const cross = playbackSamples[1]
+  const trace = await page.evaluate(() => window.__naturalPlayback)
+  const { start, end } = trace
+  const wallMs = start && end ? end.atMs - start.atMs : null
+  const naturalCompleted = Boolean(start && end && start.id === natural.id && end.id === natural.id &&
+    start.currentTime < 1 && end.duration > 0 && Math.abs(end.currentTime - end.duration) < 0.5 &&
+    start.playbackRate === 1 && end.playbackRate === 1 && trace.seeks.length === 0 && trace.rateChanges.length === 0 &&
+    wallMs >= (end.duration - start.currentTime) * 1000 - 2000)
+  report.evidence.naturalContinuation = {
+    ...trace, wallMs, naturalCompleted,
+    playbackSamples: playbackSamples.map((s) => ({
+      currentId: s.currentId, loadedId: s.loadedId, audioSrc: s.audioSrc,
+      currentTime: s.currentTime, paused: s.paused, ended: s.ended,
+      readyState: s.readyState, resolving: s.resolving, status: s.status,
+    })),
+  }
+  check('网页：第一首自然播完后自动接入后台补充的一批（没有因队列耗尽停止）', naturalCompleted && isBatchTrackPlaying(...playbackSamples), {
     currentId: cross.currentId,
     naturalTrack: { id: natural.id, durationSec: +(natural.durationMs / 1000).toFixed(1) },
+    ended: end, wallMs, seeks: trace.seeks.length,
+    loadedId: cross.loadedId,
+    progress: playbackSamples.map((s) => s.currentTime),
     fromBatch: cross.autoQueueIds,
     status: cross.status,
   })
@@ -813,14 +868,16 @@ async function main() {
   log('\n— 2. 服务端补歌协调 —')
   await runServerChecks()
 
-  log('\n— 3. 真实 Codex 补歌 —')
-  await runRealCodexRefill()
+  if (!SERVER_ONLY) {
+    log('\n— 3. 真实 Codex 补歌 —')
+    await runRealCodexRefill()
 
-  log('\n— 4. 真实浏览器：跨批续播与控制边界 —')
-  const tracks = await pickPlayableTracks(4)
-  if (tracks.length < 4) throw new Error('可完整播放的候选不足 4 首，无法做浏览器验证')
-  report.evidence.tracks = tracks.map((t) => ({ id: t.id, name: t.name }))
-  await runBrowserChecks(tracks)
+    log('\n— 4. 真实浏览器：跨批续播与控制边界 —')
+    const tracks = await pickPlayableTracks(4)
+    if (tracks.length < 4) throw new Error('可完整播放的候选不足 4 首，无法做浏览器验证')
+    report.evidence.tracks = tracks.map((t) => ({ id: t.id, name: t.name }))
+    await runBrowserChecks(tracks)
+  }
 
   report.summary = {
     passed: report.checks.filter((c) => c.ok).length,
@@ -851,5 +908,9 @@ main()
       if (reportBrowser) await reportBrowser.close()
     } catch (_) {}
     stopIsolatedServer()
-    if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true })
+    if (tmpDir) {
+      const trash = path.join(os.homedir(), '.Trash')
+      fs.mkdirSync(trash, { recursive: true })
+      fs.renameSync(tmpDir, path.join(trash, path.basename(tmpDir)))
+    }
   })

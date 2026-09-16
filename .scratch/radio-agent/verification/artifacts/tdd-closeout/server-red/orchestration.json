@@ -1,0 +1,342 @@
+{
+  "at": "2026-09-16T05:57:53.888Z",
+  "base": "http://127.0.0.1:8792",
+  "isolated": true,
+  "checks": [
+    {
+      "name": "控制器：待播不足且正在收听时触发一次补歌",
+      "ok": true,
+      "detail": {
+        "calls": 1,
+        "batches": 1,
+        "exclusion": [
+          9
+        ]
+      }
+    },
+    {
+      "name": "控制器：在途期间重复触发不会重复生成",
+      "ok": true,
+      "detail": {
+        "secondCheck": false
+      }
+    },
+    {
+      "name": "控制器：结果通过 onBatch 只交给追加逻辑（不替换队列）",
+      "ok": true
+    },
+    {
+      "name": "控制器：待播充足时不触发补歌",
+      "ok": true,
+      "detail": {
+        "pending": 3,
+        "threshold": 1
+      }
+    },
+    {
+      "name": "控制器：失败后进入退避（不是紧密重试）",
+      "ok": true,
+      "detail": {
+        "state": "backoff",
+        "attempts": 1,
+        "delayMs": 1000
+      }
+    },
+    {
+      "name": "控制器：退避按 1s→2s 递增，达到最大次数后等待恢复",
+      "ok": true,
+      "detail": {
+        "afterSecond": {
+          "attempts": 2,
+          "delayMs": 1000
+        },
+        "afterThird": {
+          "state": "waiting_recovery",
+          "attempts": 3
+        }
+      }
+    },
+    {
+      "name": "控制器：等待恢复后不再自动重试（不用无限重试掩盖问题）",
+      "ok": true,
+      "detail": {
+        "callsBefore": 4,
+        "callsAfterAnHour": 4
+      }
+    },
+    {
+      "name": "控制器：用户动作可以从等待恢复中重新拉起补歌",
+      "ok": true,
+      "detail": {
+        "calls": 5,
+        "batches": 2
+      }
+    },
+    {
+      "name": "控制器：取消后迟到的补歌结果不会落到队列上",
+      "ok": true,
+      "detail": {
+        "lastBatch": 202,
+        "epochBefore": 1789538274609,
+        "epochAfter": 1789538274610
+      }
+    },
+    {
+      "name": "控制器：被新意图取代的结果按“作废”处理，不计为失败重试",
+      "ok": true,
+      "detail": {
+        "state": "idle",
+        "attempts": 0
+      }
+    },
+    {
+      "name": "控制器：服务端会话失效但客户端已换新会话时，会再试一次而不是停住",
+      "ok": true,
+      "detail": {
+        "calls": 2,
+        "batches": 1
+      }
+    },
+    {
+      "name": "控制器：本地取消后，过期的补歌请求不会发往服务端",
+      "ok": true,
+      "detail": {
+        "calls": 0
+      }
+    },
+    {
+      "name": "控制器：实际追加 0 首时按失败处理（退避重试，不假装补充成功）",
+      "ok": true,
+      "detail": {
+        "attempts": 1,
+        "state": "backoff",
+        "batches": 0
+      }
+    },
+    {
+      "name": "服务端：同一会话同一意图的并发补歌只生成一批（另一个复用结果）",
+      "ok": true,
+      "detail": {
+        "deduped": [
+          true,
+          null
+        ],
+        "codexCalls": 1,
+        "sameBatch": true
+      }
+    },
+    {
+      "name": "服务端：更新的编排意图会让旧补歌任务作废",
+      "ok": true,
+      "detail": {
+        "old": {
+          "status": 502,
+          "code": "superseded"
+        },
+        "next": {
+          "status": 200,
+          "picks": 3
+        }
+      }
+    },
+    {
+      "name": "服务端：迟到的过期请求被拒绝，不取消更新的在途任务、也不重复调用",
+      "ok": true,
+      "detail": {
+        "stale": {
+          "code": "superseded"
+        },
+        "newer": {
+          "ok": true,
+          "picks": 3
+        },
+        "codexCalls": 1
+      }
+    },
+    {
+      "name": "服务端：新批次完成后仍拒绝旧意图，不额外消耗 Codex 调用",
+      "ok": false,
+      "detail": {
+        "stale": {
+          "ok": true
+        },
+        "codexCalls": 2
+      }
+    },
+    {
+      "name": "服务端：候选会排除当前曲与已排队曲，且结果不重复",
+      "ok": true,
+      "detail": {
+        "excluded": 12,
+        "picks": [
+          412911436,
+          287035,
+          29774171,
+          1806516957,
+          2002712975
+        ]
+      }
+    },
+    {
+      "name": "服务端：进队列前每首都有可播性校验",
+      "ok": true,
+      "detail": {
+        "kinds": [
+          "full",
+          "full",
+          "full",
+          "full",
+          "full"
+        ]
+      }
+    },
+    {
+      "name": "服务端：Codex 超时时用曲库候选降级续播",
+      "ok": true,
+      "detail": {
+        "reason": "timeout",
+        "picks": [
+          490602750,
+          420401511,
+          29357087
+        ]
+      }
+    },
+    {
+      "name": "服务端：失败后进入冷却，冷却期内不再消耗 Codex 调用",
+      "ok": true,
+      "detail": {
+        "secondReason": "codex_cooldown",
+        "codexCalls": 1
+      }
+    },
+    {
+      "name": "服务端：候选被排除完时报“候选不足”，不伪造结果",
+      "ok": true,
+      "detail": {
+        "status": 409,
+        "code": "candidates_exhausted",
+        "message": "排除当前与已排队歌曲后，曲库里没有新的候选了（已排除 456 首）"
+      }
+    },
+    {
+      "name": "服务端：所有候选都不可播时明确报 no_playable",
+      "ok": true,
+      "detail": {
+        "status": 502,
+        "code": "no_playable"
+      }
+    },
+    {
+      "name": "服务端：音乐接口整体不可用时明确报 music_unavailable",
+      "ok": true,
+      "detail": {
+        "status": 503,
+        "code": "music_unavailable",
+        "message": "音乐服务查询失败（尝试 9 首都没成功），暂时无法补歌"
+      }
+    },
+    {
+      "name": "服务端：停止会话会作废在途补歌，结果不会落库/外泄",
+      "ok": true,
+      "detail": {
+        "lateCode": "superseded",
+        "stopped": true,
+        "openSession": null
+      }
+    }
+  ],
+  "evidence": {
+    "isolatedServer": {
+      "port": 8792,
+      "db": "radio.db",
+      "log": "/var/folders/qb/hypp8v113nn6v1ssxflxsb7m0000gn/T/radio-orch-Ln96ej/server.log"
+    },
+    "controllerUnit": {
+      "calls": 10,
+      "statuses": [
+        {
+          "text": "后台准备下一批歌曲…",
+          "cls": "prep"
+        },
+        {
+          "text": "后台准备下一批歌曲…",
+          "cls": "prep"
+        },
+        {
+          "text": "后台补歌失败（Codex 额度受限），1 秒后重试（第 1/3 次）。",
+          "cls": "warn"
+        },
+        {
+          "text": "后台准备下一批歌曲…",
+          "cls": "prep"
+        },
+        {
+          "text": "后台补歌失败（Codex 额度受限），2 秒后重试（第 2/3 次）。",
+          "cls": "warn"
+        },
+        {
+          "text": "后台准备下一批歌曲…",
+          "cls": "prep"
+        },
+        {
+          "text": "补歌已暂停：Codex 额度受限——额度受限。点“下一首”或重新播放会再试一次。",
+          "cls": "bad"
+        },
+        {
+          "text": "已重新尝试后台补歌。",
+          "cls": "prep"
+        },
+        {
+          "text": "后台准备下一批歌曲…",
+          "cls": "prep"
+        },
+        {
+          "text": "后台准备下一批歌曲…",
+          "cls": "prep"
+        },
+        {
+          "text": "后台准备下一批歌曲…",
+          "cls": "prep"
+        },
+        {
+          "text": "后台准备下一批歌曲…",
+          "cls": "prep"
+        },
+        {
+          "text": "后台准备下一批歌曲…",
+          "cls": "prep"
+        },
+        {
+          "text": "后台准备下一批歌曲…",
+          "cls": "prep"
+        },
+        {
+          "text": "后台准备下一批歌曲…",
+          "cls": "prep"
+        },
+        {
+          "text": "后台补歌失败（补歌结果与待播重复），1 秒后重试（第 1/3 次）。",
+          "cls": "warn"
+        }
+      ]
+    },
+    "server": {
+      "dedup": {
+        "calls": 1,
+        "injected": 1,
+        "lastMode": "slow",
+        "lastAt": "2026-09-16T05:57:56.243Z",
+        "mode": "slow",
+        "delayMs": 1200
+      },
+      "degraded": "timeout",
+      "secondReason": "codex_cooldown",
+      "exhausted": "排除当前与已排队歌曲后，曲库里没有新的候选了（已排除 456 首）"
+    }
+  },
+  "summary": {
+    "passed": 24,
+    "failed": 1
+  }
+}

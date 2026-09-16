@@ -8,6 +8,7 @@
     "doc": "docs"
   },
   "scripts": {
+    "test": "node --test scripts/tests/*.test.mjs",
     "start": "node server/index.js",
     "start:test": "RADIO_TEST_HOOKS=1 node server/index.js",
     "read-library": "node scripts/read-library.mjs",

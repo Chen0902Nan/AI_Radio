@@ -382,7 +382,7 @@ package.json             新增 verify:orchestration
 
 ### 10.4 验证结果
 
-**`npm run verify:orchestration`：33 通过 / 0 失败**。脚本自建独立服务进程与临时 SQLite（不写真实设置／反馈／播放记录），证据：`artifacts/orchestration.json`。
+**第二轮 `npm run verify:orchestration`：40 通过 / 0 失败**。脚本自建独立服务进程与临时 SQLite（不写真实设置／反馈／播放记录），证据：`artifacts/orchestration.json`。其中自然续播断言仍可能在新曲解析期间提前通过，修正与补证见 10.7。
 
 | 分组 | 项数 | 要点 |
 | --- | --- | --- |
@@ -415,7 +415,31 @@ package.json             新增 verify:orchestration
 回归：真实浏览器里强制服务端返回一首已播过的歌，断言它被追加、越过原队尾后继续播放该曲（`完整队列播到底后继续播放`）；控制器单元断言追加 0 首时进入退避。
 
 **缺陷 2：迟到的旧请求会取消新请求。** 服务端只判断「epoch 不同就作废在途任务」，没比大小。乱序场景下，先到的第 2 代被迟到的第 1 代取消，还重复调用了一次 Codex。
-修复：服务端记录在途请求的 epoch 水位，更旧的请求直接拒绝（`superseded`），不影响在途的新任务；水位只在生成期间有效，页面刷新后的新请求不受阻。客户端 epoch 改为基于页面启动时间（跨刷新单调），并在发送前检查本地是否已被取消，不再把过期请求发出去。
+第二轮修复：服务端在生成期间拒绝更旧的请求（`superseded`），不影响在途的新任务；当时任务完成即清除水位，仍会接受完成后迟到的旧请求，后续修正见 10.7。客户端 epoch 改为基于页面启动时间，并在发送前检查本地是否已被取消，不再把过期请求发出去。
 回归：先发起 epoch 200（慢响应），300ms 后再发 epoch 100，断言旧请求被拒、新请求正常完成、Codex 只调用 1 次；控制器单元断言本地取消后请求根本不会发出。
 
 修复后全套重新验证：`verify:orchestration` 40/40；回归 `read-library` 退出码 0、`verify:playback` 14/14、`verify:fixes` 18/18、`verify:session` 25/25、`verify:codex --skip-real` 9/9（真实 Codex 路径由本轮编排验证覆盖）。
+
+### 10.7 TDD 收尾：会话意图保留与自然续播证据（2026-09-16）
+
+基于 `e9862e0`，限定修复两处复核缺口。测试边界为现有 `POST /api/queue/refill` 的请求结果，以及浏览器音频元素的播放观测。
+
+**第一条 RED → GREEN：旧请求不能因新任务完成而重新有效。** 先添加“epoch 200 完成后再请求 epoch 100”的 HTTP 回归：修复前旧请求被接受，注入的 Codex 调用数为 2，结果为 [24 通过 / 1 失败](artifacts/tdd-closeout/server-red/orchestration.json)。然后将最新意图代次独立保留到会话结束；完成时只清除在途任务。修复后旧请求返回 `superseded`、调用数保持 1，且同一代次仍可生成下一批；包含控制器与服务端的 [26 项检查全部通过](artifacts/tdd-closeout/server-green/orchestration.json)。
+
+**第二条 RED → GREEN：歌名变化不等于音频开始播放。** 从原浏览器判定中提取可独立验证的观测规则。首先用“currentId 已变、loadedId 仍旧、旧音频 ended=true”的快照使测试失败；再用“新音源匹配但播放进度没增长”使测试失败。修正后要求前后两个快照都属于同一首补入曲、实际音源一致、未暂停／结束／加载中、音频就绪且进度增长。`npm test` 的 3 项检查通过。
+
+自然跨批验证另行记录真实音频的 `playing`／`ended`、单调时钟耗时、拖动与倍速事件；只有原曲从起点以正常速度完整结束，且新曲实际加载并推进，才算通过。原先只检查 `currentId` 和 `paused` 的证据不足已修正。
+
+**最终结果：3 项离线测试通过；[编排回归 41 通过 / 0 失败](artifacts/tdd-closeout/browser-green/orchestration.json)**（控制器 13、服务端 13、真实浏览器 15；真实 Codex 调用本轮跳过）。自然曲实际结束位置与音频时长均为 **198.613333 秒**，正常速度，0 次拖动，观测墙钟耗时 **200.6523 秒**。补入曲 `currentId = loadedId = 2066755290`，播放进度从 **0.043648 秒增长到 1.045175 秒**，状态为“播放中”；详见产物 `evidence.naturalContinuation` 和 [续播截图](artifacts/tdd-closeout/browser-green/shot-10-crossbatch-playing.png)。
+
+本轮还覆盖了暂停／停止／刷新／快速切歌、已播曲重新入队、降级曲实际播放，以及候选耗尽后的有界重试。其余边界仍采用注入或拖近结尾加速；本轮不代表两小时连续收听验收，也不代表新增真实 Codex 调用验证。
+
+复现命令：
+
+```sh
+npm test
+RADIO_REPORT_OUT=.scratch/radio-agent/verification/artifacts/tdd-closeout/server-green node scripts/verify-orchestration.mjs --server-only --skip-real
+RADIO_REPORT_OUT=.scratch/radio-agent/verification/artifacts/tdd-closeout/browser-green node scripts/verify-orchestration.mjs --skip-real
+```
+
+测试服务与数据库独立；Codex 使用现有故障注入，本轮跳过真实模型调用。音乐与浏览器播放使用真实链路。临时服务目录完成后移入废纸篓，保留上述验收证据。
