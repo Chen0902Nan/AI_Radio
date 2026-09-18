@@ -23,7 +23,9 @@ const OUT = process.env.RADIO_REPORT_OUT
   ? path.resolve(process.env.RADIO_REPORT_OUT)
   : path.join(ROOT, '.scratch/radio-agent/verification/artifacts')
 fs.mkdirSync(OUT, { recursive: true })
-const codex = require('../server/codex.js')
+// 迁移后使用 Nest 编译产物的 CodexService 静态部分（原 server/codex.js）
+const codexMod = require('../apps/api/dist/codex/codex.service.js')
+const codex = { ...codexMod, pickTracks: (opts) => new codexMod.CodexService().pickTracks(opts) }
 
 const args = process.argv.slice(2)
 const BASE = (args.find((a) => a.startsWith('--base=')) || '--base=http://127.0.0.1:8787').split('=')[1]

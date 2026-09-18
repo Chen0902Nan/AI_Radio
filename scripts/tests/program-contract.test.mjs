@@ -1,6 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import c from '../../public/program-contract.js'
+import { createRequire } from 'node:module'
+
+// 迁移后测试目标：packages/contracts 的 TS 实现（原 public/program-contract.js）
+const require = createRequire(import.meta.url)
+const c = require('@radio/contracts')
 
 /* ---------- 工具 ---------- */
 

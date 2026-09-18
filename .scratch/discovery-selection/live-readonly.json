@@ -1,0 +1,23 @@
+{
+  "at": "2026-09-18T07:43:05.027Z",
+  "libraryComplete": true,
+  "libraryCount": 709,
+  "candidates": 43,
+  "outsideLibrary": 39,
+  "checked": [
+    {
+      "id": 60102,
+      "kind": "full"
+    },
+    {
+      "id": 36199725,
+      "kind": "full"
+    },
+    {
+      "id": 33248189,
+      "kind": "full"
+    }
+  ],
+  "message": null,
+  "durationMs": 9250
+}

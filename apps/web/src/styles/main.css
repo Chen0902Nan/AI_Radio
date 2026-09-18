@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+
+/* 主题变量：从旧 style.css 的 :root 迁移（M3 逐组件替换时保留 CSS 变量作为主题值） */
+@theme {
+  --color-bg: #0e0f13;
+  --color-panel: #16181f;
+  --color-panel-2: #1d2029;
+  --color-line: #2a2e3a;
+  --color-ink: #e8eaf0;
+  --color-dim: #9aa1b1;
+  --color-accent: #6b8afd;
+  --color-warn: #f0a44a;
+  --color-bad: #ef6b6b;
+  --color-ok: #5ec98b;
+}

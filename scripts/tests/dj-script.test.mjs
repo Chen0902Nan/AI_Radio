@@ -3,9 +3,10 @@ import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
-const dj = require('../../server/dj-script.js')
-const contract = require('../../public/program-contract.js')
-const codex = require('../../server/codex.js')
+// 迁移后测试目标：apps/api/src/dj 的 TS 实现（原 server/dj-script.js）
+const dj = require('../../apps/api/dist/dj/dj-script.service.js')
+const contract = require('@radio/contracts')
+const codex = require('../../apps/api/dist/codex/codex.service.js')
 
 /* ---------- 提示词 ---------- */
 

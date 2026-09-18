@@ -6,3 +6,9 @@ data/
 .env
 .env.*
 !.env.example
+
+# 构建产物（迁移后 TS 编译/打包输出）
+apps/api/dist/
+apps/web/dist/
+apps/web/dist-playback/
+packages/contracts/dist/

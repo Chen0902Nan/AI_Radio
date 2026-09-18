@@ -4,11 +4,13 @@ import { createRequire } from 'node:module'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { moveToTrash } from '../lib/trash.mjs'
 
 const require = createRequire(import.meta.url)
-const fish = require('../../server/fish.js')
-const mp3Duration = require('../../server/mp3-duration.js')
-const cacheMod = require('../../server/dj-audio-cache.js')
+// 迁移后测试目标：apps/api/src/dj 的 TS 实现（原 server/fish.js 等）
+const fish = require('../../apps/api/dist/dj/fish.service.js')
+const mp3Duration = require('../../apps/api/dist/dj/mp3-duration.js')
+const cacheMod = require('../../apps/api/dist/dj/audio-cache.js')
 
 /* ---------- 合成 MP3 测试素材（MPEG1 Layer3, 128kbps, 44100Hz） ---------- */
 
@@ -295,7 +297,17 @@ function tmpCache(opts = {}) {
     },
     ...opts,
   })
-  return { cache, dir, trashed, trashDir, cleanup: () => { fs.rmSync(dir, { recursive: true, force: true }); fs.rmSync(trashDir, { recursive: true, force: true }) } }
+  // 清理遵守项目规则：移入废纸篓，不自动删除
+  return {
+    cache,
+    dir,
+    trashed,
+    trashDir,
+    cleanup: () => {
+      moveToTrash(dir)
+      moveToTrash(trashDir)
+    },
+  }
 }
 
 const PUT = (over = {}) => ({

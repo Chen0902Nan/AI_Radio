@@ -1,23 +1,31 @@
 {
   "name": "ai_radio",
   "version": "1.0.0",
-  "description": "个人电台（第一阶段：音乐链路与最小网页播放器）",
-  "main": "server/index.js",
+  "description": "个人电台：以歌曲为主体、由 DJ 偶尔介绍歌曲并串场的个人收听体验",
+  "main": "apps/api/dist/main.js",
   "private": true,
-  "directories": {
-    "doc": "docs"
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24.16.0 <25"
   },
   "scripts": {
-    "test": "node --test scripts/tests/*.test.mjs",
-    "start": "node --env-file-if-exists=.env --use-env-proxy server/index.js",
-    "start:test": "RADIO_TEST_HOOKS=1 node --env-file-if-exists=.env --use-env-proxy server/index.js",
+    "dev": "node scripts/dev.mjs",
+    "test": "npm run build && node --test --test-force-exit scripts/tests/*.test.mjs scripts/tests/*.test.cjs apps/web/test/*.test.mjs apps/web/test/*.test.cjs",
+    "start": "node --env-file-if-exists=.env --use-env-proxy apps/api/dist/main.js",
+    "start:test": "RADIO_TEST_HOOKS=1 node --env-file-if-exists=.env --use-env-proxy apps/api/dist/main.js",
+    "build": "npm run build -w @radio/contracts && npm run build -w @radio/web && npm run build -w @radio/api",
+    "typecheck": "npm run typecheck -w @radio/contracts && npm run typecheck -w @radio/web && npm run typecheck -w @radio/api",
     "read-library": "node scripts/read-library.mjs",
     "verify:playback": "node scripts/verify-playback.mjs",
     "verify:fixes": "node scripts/verify-fixes.mjs",
     "verify:codex": "node scripts/verify-codex.mjs",
     "verify:session": "node scripts/verify-session.mjs",
     "verify:orchestration": "node scripts/verify-orchestration.mjs",
-    "verify:dj-smoke": "node scripts/verify-dj-smoke.mjs"
+    "verify:dj-smoke": "node scripts/verify-dj-smoke.mjs",
+    "test:browser": "npm run build && node --test scripts/browser/*.test.mjs"
   },
   "repository": {
     "type": "git",
@@ -36,6 +44,7 @@
     "@neteasecloudmusicapienhanced/api": "^4.40.1"
   },
   "devDependencies": {
-    "puppeteer-core": "^25.11.0"
+    "puppeteer-core": "^25.11.0",
+    "typescript": "^5.9.3"
   }
 }

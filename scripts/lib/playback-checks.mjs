@@ -6,3 +6,10 @@ export function isBatchTrackPlaying(previous, current) {
   return Boolean(ready(previous) && ready(current) &&
     previous.currentId === current.currentId && current.currentTime > previous.currentTime)
 }
+
+/** 同一音源在两个采样点都应当播放，却没有任何媒体时间推进。 */
+export function isPlaybackStalled(previous, current) {
+  return Boolean(previous && current && previous.src && previous.src === current.src &&
+    !previous.paused && !current.paused && Number.isFinite(previous.t) && Number.isFinite(current.t) &&
+    Math.abs(current.t - previous.t) < 0.05)
+}

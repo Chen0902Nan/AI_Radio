@@ -4,12 +4,14 @@ import { createRequire } from 'node:module'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { moveToTrash } from '../lib/trash.mjs'
 
 const require = createRequire(import.meta.url)
-const contract = require('../../public/program-contract.js')
-const fishMod = require('../../server/fish.js')
-const cacheMod = require('../../server/dj-audio-cache.js')
-const { createDjPipeline } = require('../../server/dj-pipeline.js')
+// 迁移后测试目标：apps/api/src 的 TS 实现（原 server/dj-pipeline.js 等）
+const contract = require('@radio/contracts')
+const fishMod = require('../../apps/api/dist/dj/fish.service.js')
+const cacheMod = require('../../apps/api/dist/dj/audio-cache.js')
+const { createDjPipeline } = require('../../apps/api/dist/dj/dj-pipeline.service.js')
 
 function deferred() {
   let resolve, reject
@@ -92,7 +94,10 @@ function makeDeps(over = {}) {
     tick: (ms) => {
       clock += ms
     },
-    cleanup: () => fs.rmSync(dir, { recursive: true, force: true }),
+    // 清理遵守项目规则：移入废纸篓，不自动删除
+    cleanup: () => {
+      moveToTrash(dir)
+    },
   }
 }
 
@@ -443,4 +448,16 @@ test('preview 无配置时明确失败，不发起合成', async () => {
   } finally {
     d.cleanup()
   }
+})
+
+test('DJ任务终态发布带会话与机会身份的状态通知', async () => {
+  const messages = []
+  const d = makeDeps({ onStatus: msg => messages.push(msg) })
+  const p = createDjPipeline(d.deps)
+  try {
+    const req = REQ()
+    const r = await p.prepare(req)
+    await completeReady(d, req)
+    assert.ok(messages.some(m => m.type === 'dj-status' && m.state === 'ready' && m.segueId === r.job.segueId && m.sessionId === req.sessionId && m.epoch === req.epoch && m.transitionId === req.transitionId))
+  } finally { p._dispose(); d.cleanup() }
 })

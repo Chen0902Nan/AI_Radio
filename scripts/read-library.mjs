@@ -10,7 +10,9 @@ import { collectFailures } from './lib/library-checks.mjs'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const ncm = require('../server/netease.js')
+// 迁移后使用 Nest 编译产物的 NeteaseService（原 server/netease.js）
+const { NeteaseService } = require('../apps/api/dist/music/netease.service.js')
+const ncm = new NeteaseService()
 const OUT_DIR = process.env.RADIO_REPORT_OUT
   ? path.resolve(process.env.RADIO_REPORT_OUT)
   : path.resolve(__dirname, '..', '.scratch/radio-agent/verification/artifacts')

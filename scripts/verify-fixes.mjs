@@ -20,6 +20,7 @@ import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import puppeteer from 'puppeteer-core'
 import { collectFailures } from './lib/library-checks.mjs'
+import { moveToTrash } from './lib/trash.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -443,7 +444,8 @@ function runExitCodeCheck() {
       fs.renameSync(backup, SESSION_FILE)
       fs.chmodSync(SESSION_FILE, 0o600)
     }
-    fs.rmSync(tmpOut, { recursive: true, force: true })
+    // 清理遵守项目规则：移入废纸篓，不自动删除
+    moveToTrash(tmpOut)
   }
 
   check('E 资料读取脚本在失败时会以非零退出码结束（退出码能真的传出去）', code !== 0, { exitCode: code })

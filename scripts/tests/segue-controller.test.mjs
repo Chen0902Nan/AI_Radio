@@ -3,8 +3,9 @@ import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
-const c = require('../../public/program-contract.js')
-const { SegueController } = require('../../public/segue-controller.js')
+// 迁移后测试目标：apps/web/src/orchestration 的 TS 实现（原 public/segue-controller.js）
+const c = require('@radio/contracts')
+const { SegueController } = require('../../apps/web/dist-playback/orchestration/segue-controller.cjs')
 
 /* ---------- 测试基建：可控时钟 + 可控的替身准备请求 ---------- */
 

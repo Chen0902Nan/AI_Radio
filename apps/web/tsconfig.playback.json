@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": false,
+    "outDir": "dist-playback",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@radio/contracts": [
+        "../../packages/contracts/dist/cjs"
+      ]
+    },
+    "rootDir": "src"
+  },
+  "include": [
+    "src/playback/**/*.ts",
+    "src/orchestration/**/*.ts"
+  ]
+}

@@ -31,7 +31,8 @@ const OUT = process.env.RADIO_REPORT_OUT
   : path.join(ROOT, '.scratch/radio-agent/verification/artifacts')
 fs.mkdirSync(OUT, { recursive: true })
 
-const { RefillController } = require('../public/orchestrator.js')
+// 迁移后使用 TS 版控制器（原 public/orchestrator.js）
+const { RefillController } = require('../apps/web/dist-playback/orchestration/refill-controller.cjs')
 
 const args = process.argv.slice(2)
 const EXTERNAL_BASE = (args.find((a) => a.startsWith('--base=')) || '').split('=')[1]
@@ -87,7 +88,9 @@ async function startIsolatedServer() {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'radio-orch-'))
   dbPath = path.join(tmpDir, 'radio.db')
   const logFile = path.join(tmpDir, 'server.log')
-  child = spawn(process.execPath, ['server/index.js'], {
+  // 迁移期：RADIO_SERVER_ENTRY 指向新 Nest 入口（apps/api/dist/main.js）时用它拉起隔离服务
+  const serverEntry = process.env.RADIO_SERVER_ENTRY || 'apps/api/dist/main.js'
+  child = spawn(process.execPath, [serverEntry], {
     cwd: ROOT,
     env: {
       ...process.env,

@@ -25,3 +25,12 @@ test('新曲音源匹配但进度没有增长时，仍不能判为续播成功',
 test('同一首补入曲的音源匹配且进度增长时，证明已实际续播', () => {
   assert.equal(isBatchTrackPlaying(playing, { ...playing, currentTime: 1.5 }), true)
 })
+
+test('稳定性采样识别卡在非零时间的媒体，并区分暂停与正常推进', async () => {
+  const { isPlaybackStalled } = await import('../lib/playback-checks.mjs')
+  const previous = { src: '/api/audio/1', t: 42, paused: false, playbackRate: 1 }
+  assert.equal(isPlaybackStalled(previous, { ...previous }), true)
+  assert.equal(isPlaybackStalled(previous, { ...previous, t: 43 }), false)
+  assert.equal(isPlaybackStalled(previous, { ...previous, paused: true }), false)
+  assert.equal(isPlaybackStalled(previous, { ...previous, src: '/api/audio/2', t: 0 }), false)
+})
