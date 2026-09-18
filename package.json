@@ -12,20 +12,21 @@
     "node": ">=24.16.0 <25"
   },
   "scripts": {
-    "dev": "node scripts/dev.mjs",
-    "test": "npm run build && node --test --test-force-exit scripts/tests/*.test.mjs scripts/tests/*.test.cjs apps/web/test/*.test.mjs apps/web/test/*.test.cjs",
+    "dev": "node scripts/dev.mts",
+    "test": "npm run build && node --test --test-force-exit scripts/tests/*.test.mts scripts/tests/*.test.cts apps/web/test/*.test.mts apps/web/test/*.test.cts",
     "start": "node --env-file-if-exists=.env --use-env-proxy apps/api/dist/main.js",
     "start:test": "RADIO_TEST_HOOKS=1 node --env-file-if-exists=.env --use-env-proxy apps/api/dist/main.js",
     "build": "npm run build -w @radio/contracts && npm run build -w @radio/web && npm run build -w @radio/api",
-    "typecheck": "npm run typecheck -w @radio/contracts && npm run typecheck -w @radio/web && npm run typecheck -w @radio/api",
-    "read-library": "node scripts/read-library.mjs",
-    "verify:playback": "node scripts/verify-playback.mjs",
-    "verify:fixes": "node scripts/verify-fixes.mjs",
-    "verify:codex": "node scripts/verify-codex.mjs",
-    "verify:session": "node scripts/verify-session.mjs",
-    "verify:orchestration": "node scripts/verify-orchestration.mjs",
-    "verify:dj-smoke": "node scripts/verify-dj-smoke.mjs",
-    "test:browser": "npm run build && node --test scripts/browser/*.test.mjs"
+    "typecheck": "npm run typecheck -w @radio/contracts && npm run typecheck -w @radio/web && npm run typecheck -w @radio/api && npm run typecheck:tools",
+    "read-library": "node scripts/read-library.mts",
+    "verify:playback": "node scripts/verify-playback.mts",
+    "verify:fixes": "node scripts/verify-fixes.mts",
+    "verify:codex": "node scripts/verify-codex.mts",
+    "verify:session": "node scripts/verify-session.mts",
+    "verify:orchestration": "node scripts/verify-orchestration.mts",
+    "verify:dj-smoke": "node scripts/verify-dj-smoke.mts",
+    "test:browser": "npm run build && node --test --test-force-exit --test-timeout=90000 scripts/browser/*.test.mts",
+    "typecheck:tools": "tsc -p tsconfig.tools.json"
   },
   "repository": {
     "type": "git",
@@ -44,6 +45,7 @@
     "@neteasecloudmusicapienhanced/api": "^4.40.1"
   },
   "devDependencies": {
+    "@types/node": "24.13.5",
     "puppeteer-core": "^25.11.0",
     "typescript": "^5.9.3"
   }

@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "vite build && npm run build:playback",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "build:playback": "tsc -p tsconfig.playback.json && node ../../scripts/finalize-playback-build.mjs",
-    "test": "npm run build -w @radio/contracts && npm run build:playback && node --test test/*.test.mjs test/*.test.cjs"
+    "build:playback": "tsc -p tsconfig.playback.json && node ../../scripts/finalize-playback-build.mts",
+    "test": "npm run build -w @radio/contracts && npm run build:playback && node --test test/*.test.mts test/*.test.cts"
   },
   "dependencies": {
     "@radio/contracts": "*",

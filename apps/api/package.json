@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "node ../../scripts/dev.mjs --api-only",
+    "dev": "node ../../scripts/dev.mts --api-only",
     "start": "node --env-file-if-exists=../../.env --use-env-proxy dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

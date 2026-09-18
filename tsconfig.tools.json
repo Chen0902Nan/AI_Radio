@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "node"
+    ],
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true
+  },
+  "include": [
+    "scripts/**/*.mts",
+    "scripts/**/*.cts",
+    "apps/web/test/**/*.mts",
+    "apps/web/test/**/*.cts",
+    "packages/fix-esm-ext.mts",
+    "scripts/**/*.d.ts"
+  ]
+}
