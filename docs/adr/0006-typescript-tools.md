@@ -30,10 +30,14 @@ npm test -w @radio/web
 npm test -w @radio/contracts
 ```
 
-需要登录态或模型供应商的验证命令应使用隔离环境，其运行结果与离线测试分别记录。此次仅执行离线和浏览器替身回归，没有重新验收真实供应商链路。
+需要登录态或模型供应商的验证命令应使用隔离环境，其运行结果与离线测试分别记录。此次仅执行离线和浏览器替身回归，没有重新验收真实供应商链路。逐项结果与边界见 [迁移验证](../../.scratch/tooling-typescript/verification.md) 与 [任务记录](../../.scratch/tooling-typescript/issues/01-migrate-tools.md)。
 
 ## 兼容性
 
 前后端与共享包的编译输出仍为 JS，`package.json` 的生产入口、`dist` 导入和 `.cjs` 播放控制器产物引用保留。历史验证报告里的旧命令记录保持原样；当前执行命令以各包 `package.json` 为准。
 
 独立 contracts 测试命令改为先构建，再执行现有 `scripts/tests/program-contract.test.mts`，修复此前指向不存在目录的问题。
+
+---
+
+> 本文引用的 `.scratch/` 证据文件属本机工作区，未随仓库分发；克隆中这些链接不可用。

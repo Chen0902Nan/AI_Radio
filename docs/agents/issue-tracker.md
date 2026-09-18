@@ -2,6 +2,8 @@
 
 Issues and specs for this repo live as markdown files in `.scratch/`.
 
+> **`.scratch/` 是本机工作区，已在 `.gitignore` 中**：新增文件不会进入版本控制，已跟踪的旧文件也已用 `git rm --cached` 退出。因此任务记录、验证报告与证据只存在于作者本机；克隆仓库的人看不到它们。需要长期共享的结论要写进 `docs/`（ADR、验证报告）而不是留在 `.scratch/`。
+
 ## Conventions
 
 - One feature per directory: `.scratch/<feature-slug>/`

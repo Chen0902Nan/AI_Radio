@@ -282,3 +282,7 @@ SSE 在 M4 单独引入：
 - [Tailwind CSS 的 Vite 安装方式](https://tailwindcss.com/docs/installation/using-vite)：采用官方 Vite 插件接入，避免套用过期配置。
 - [NestJS 参数校验](https://docs.nestjs.com/techniques/validation)：DTO 与请求入口校验机制，业务规则保持共享合同。
 - [NestJS SSE](https://docs.nestjs.com/techniques/server-sent-events)：Observable 事件输出及连接清理；本文额外定义快照恢复和业务去重，不假定框架自动完成。
+
+---
+
+> 本文引用的 `.scratch/` 证据文件属本机工作区，未随仓库分发；克隆中这些链接不可用。

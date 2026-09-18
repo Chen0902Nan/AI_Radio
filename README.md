@@ -27,3 +27,31 @@ npm start
 ```
 
 此模式打开 http://127.0.0.1:8787 ，由 Nest 提供构建后的页面，不包含热更新。
+
+## 测试与类型检查
+
+```sh
+npm test            # 先构建 contracts/web/api 与播放控制器产物，再跑离线全套（不需要外部服务）
+npm run typecheck   # contracts / web / api / tools 四份严格检查
+```
+
+需要 Chrome、真实登录态或真实服务的回归另有入口：`npm run test:browser` 与 `npm run verify:*`（`verify:playback`、`verify:session`、`verify:orchestration`、`verify:dj-smoke` 等），它们会另起独立实例，请勿指向正在使用的服务。
+
+## 项目结构
+
+```
+apps/web/           React + Vite + Tailwind 前端；播放控制器与队列在这里
+apps/api/           NestJS 后端：音乐接入、选歌与补歌、DJ 串场、会话与播放记录、SSE
+packages/contracts/ 共享纯类型与校验器
+scripts/            开发启动器与核验脚本（TypeScript：.mts / .cts）
+data/               SQLite、网易云登录态、DJ 音频缓存（不入 Git）
+```
+
+## 文档
+
+- [CONTEXT.md](CONTEXT.md) — 领域词汇表，术语以此为准。
+- [docs/adr/](docs/adr/) — 架构决定（队列归属、技术栈迁移、音乐接入、探索选歌、工具链 TypeScript）。
+- [docs/migration/route-contract.md](docs/migration/route-contract.md) — HTTP 路由合同。
+- [docs/migration/data-config-paths.md](docs/migration/data-config-paths.md) — 数据路径与环境变量清单。
+- [docs/migration/m5-verification.md](docs/migration/m5-verification.md) — 迁移收口状态与**尚未验收的事项**。
+- [AGENTS.md](AGENTS.md) — 给 AI 协作代理的项目约定与硬边界。

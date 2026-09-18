@@ -2,11 +2,13 @@
 
 迁移时必须逐项保留覆盖方式；编译到 dist 后路径必须仍指向项目根 `data/`，不得默默创建空库或丢失登录态。
 
+> **§1、§3 是 M0 冻结时的快照**，其中的源码定位（`server/*.js`）与旧运行入口已随 M5 清理删除，当前实现位置见 [m5-verification §5 文件映射索引](./m5-verification.md)。**§2 环境变量表仍然有效**，是当前配置的权威清单。
+
 ## 1. 文件系统路径
 
 | 路径 | 用途 | 覆盖方式 | 迁移要点 |
 | --- | --- | --- | --- |
-| `data/radio.db`（+ `-shm`/`-wal`） | SQLite 四类表：settings / feedback / sessions / plays | `RADIO_DB_FILE` 环境变量（`server/db.js:16`） | M2 不改 schema；WAL 场景不能只复制主文件做备份 |
+| `data/radio.db`（+ `-shm`/`-wal`） | SQLite 五类表：settings / feedback / sessions / plays / selections（`selections` 由 2026-09-18 探索选歌引入） | `RADIO_DB_FILE` 环境变量（旧 `server/db.js:16`，现 `apps/api/src/config/app-config.ts`） | M2 不改 schema；WAL 场景不能只复制主文件做备份 |
 | `data/session.json` | 网易云登录 cookie + profile（chmod 600） | 无（固定路径，`server/netease.js:27`） | 路径从 `__dirname` 相对推导；dist 后必须仍指项目根 |
 | `data/ncm-tmp/` | 上游包的 anonymous_token、xeapi_public_key 镜像（重启免重新注册） | 无 | 随 DATA_DIR 走 |
 | `data/dj-audio/` | DJ 音频缓存（64 位十六进制资产名 .mp3/.json） | `DJ_AUDIO_CACHE_DIR`（`server/dj-audio-cache.js:23`） | 淘汰只移入废纸篓 |
@@ -37,9 +39,11 @@
 
 | 命令 | 行为 |
 | --- | --- |
-| `npm start` | `node --env-file-if-exists=.env --use-env-proxy server/index.js` |
+| `npm run dev` | 一条命令起 Vite + Nest（首次自动构建；前端 HMR，后端/contracts 改动后编译重启），入口 http://127.0.0.1:5173 |
+| `npm start` | `node --env-file-if-exists=.env --use-env-proxy apps/api/dist/main.js` |
 | `npm run start:test` | 同上 + `RADIO_TEST_HOOKS=1` |
-| `npm test` | `node --test scripts/tests/*.test.mjs`（离线，无外部服务） |
-| `npm run verify:*` | Puppeteer 回归脚本（需要 Chrome、登录态或独立服务） |
+| `npm test` | 先构建 contracts/web/api 与播放控制器产物，再 `node --test scripts/tests/*.test.mts scripts/tests/*.test.cts apps/web/test/*.test.mts apps/web/test/*.test.cts`（离线，无外部服务） |
+| `npm run typecheck` | contracts / web / api / `tsconfig.tools.json`（scripts 与 apps/web/test）四份严格检查 |
+| `npm run verify:*` / `npm run test:browser` | 真实服务与 Puppeteer 回归（需要 Chrome、登录态或独立实例） |
 
-迁移期间保留旧入口可回滚；新入口不得与旧入口同时对真实库执行启动收尾（`closeStaleSessions`）。
+旧入口已随 M5 清理退役，没有回滚通道；任何时刻只应有一个进程对真实库执行启动收尾（`closeStaleSessions`）。核验脚本一律用独立端口与 `RADIO_DB_FILE` 指向临时库。

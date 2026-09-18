@@ -13,7 +13,11 @@
 ## Consequences
 
 - 稳定性与合规性风险由本项目自担：社区接口随时可能被改协议或封禁，官方没有任何承诺。
-- 音乐接入收敛在 `server/netease.js` 一层；将来若官方开放取音源权限，替换范围限于这一层。
+- 音乐接入收敛在 `apps/api/src/music/netease.service.ts` 一层（迁移前的 `server/netease.js`）；将来若官方开放取音源权限，替换范围限于这一层。
 - 官方 CLI 仍可用于人工听歌，与本项目互不影响。
 
 实测细节与完整接口矩阵见 [开放平台调研](../../.scratch/radio-agent/open-platform-research.md)。
+
+---
+
+> 本文引用的 `.scratch/` 证据文件属本机工作区，未随仓库分发；克隆中这些链接不可用。

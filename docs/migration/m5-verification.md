@@ -1,6 +1,6 @@
 # M5 验证报告与迁移完成状态
 
-> 最新状态（2026-09-17 审查后修复）：下方是分阶段的历史记录，不能直接作为最终源码的验收结论。审查发现的播放/补歌接线、SSE 客户端、DJ 终态通知与展示、测试产物及故障注入问题已按 TDD 修复，见 [修复报告](../../.scratch/stack-migration-audit/fix-results.md)。已有两小时记录没有补歌批次或队列指标，不能据其证明“补歌持续供给”。修复后的真实供应商与连续两小时验收仍需另行执行。
+> 最新状态（2026-09-17 迁移收口后）：下方各节是当时的分阶段记录，不能直接当作最终源码的验收结论。审查发现的播放/补歌接线、SSE 客户端、DJ 终态通知与展示、测试产物及故障注入问题已按 TDD 修复，见 [修复报告](../../.scratch/stack-migration-audit/fix-results.md)。**修复后的真实 Codex/Fish 已在补记缺口 3 现场确认**。下方「两小时稳定性结果」是修复**之前**的运行，其记录没有补歌批次与队列指标，不能据其证明「补歌持续供给」；**修复后的连续两小时复验仍未执行**，待验收项集中列在文末「剩余待验收」。
 
 日期：2026-09-17。基线：M4 完成后的工作区。
 
@@ -76,9 +76,9 @@ npm run dev
 | `public/app.js`（媒体执行） | `apps/web/src/playback/playback-controller.ts` |
 | `public/app.js`（UI/编排） | `apps/web/src/app/radio-context.tsx` + `src/features/*` |
 | `public/index.html` / `style.css` | `apps/web/index.html` + `src/styles/main.css`（Tailwind @theme） |
-| `public/login.html` / `login.js` | 待迁（扫码登录页保留旧版经 /login 可用） |
+| `public/login.html` / `login.js` | `apps/web/src/features/login/LoginPage.tsx`（补记缺口 1 完成） |
 
-剩余待迁项（不阻塞验收）：`public/login.html`+`login.js` 的 React 化、`public/orchestrator.js`+`segue-controller.js` 的 TS 化（当前以已验证 JS 模块复用）。
+剩余待迁项：无。`public/login.html`+`login.js` 的 React 化、`public/orchestrator.js`+`segue-controller.js` 的 TS 化均已在补记缺口 1 完成（该节写于完成之前）。
 
 ---
 
@@ -175,4 +175,23 @@ npm run dev
 
 清理后验收：全套 109/109（131 − 22 项退役）；typecheck/build 0 错误；`/`与`/login`浏览器渲染正常（二维码加载、456 首资料读取）；旧 `/app.js` 404 符合预期；会话/健康 API 正常。
 
-**迁移至此收口**：生产实现只剩 `apps/web` + `apps/api` + `packages/contracts` 一套；无两套生产实现并存。剩余可选项见「剩余待验收」。
+**迁移至此收口**：生产实现只剩 `apps/web` + `apps/api` + `packages/contracts` 一套；无两套生产实现并存。
+
+---
+
+# 剩余待验收
+
+以下是迁移收口后仍未执行的验收项。**不要把它们读成已通过**——本地离线测试、隔离浏览器和只读接口核验都不能替代它们。
+
+| 待验收项 | 现状 | 为什么没做 |
+| --- | --- | --- |
+| 修复后的连续两小时复验（含补歌批次与队列指标） | 未执行 | 已有的两小时记录（12:44–14:45）是修复**前**的运行，缺少补歌批次/队列指标；修复后未重跑 |
+| DJ 机会路径的连续两小时复验 | 未执行 | 观测时段 React 端自动准备接线尚未完成；接线补齐后只做过浏览器整链验证，未做长时复验 |
+| 探索选歌的真实两小时收听 | 未执行 | 见 [探索选歌验收记录](../../.scratch/discovery-selection/verification.md)：本地测试、隔离浏览器与真实只读资料核验已通过，真实长时收听未做 |
+| 天气、飞书当日日程、开场播报、文字聊天、每日 08:45 准备 | 未实现 | 不属于迁移范围，是迁移后的产品顺序（见 [迁移方案 §9](../plans/2026-09-17-stack-migration.md)） |
+
+重跑连续观测：`npm run build` 后以 `RADIO_TEST_HOOKS=1 PORT=8792 RADIO_DB_FILE=/tmp/stability.db node --env-file-if-exists=.env --use-env-proxy apps/api/dist/main.js` 起独立实例，再跑 `node scripts/verify-stability.mts --base=http://127.0.0.1:8792 --duration-min=120`。注意历史报告写在 `/tmp/stability-report.json`，重启即失，需要长期留存时另存副本。
+
+---
+
+> 本文引用的 `.scratch/` 证据文件属本机工作区，未随仓库分发；克隆中这些链接不可用。

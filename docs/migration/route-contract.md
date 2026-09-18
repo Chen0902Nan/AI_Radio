@@ -85,3 +85,19 @@
 - `/favicon.ico` → 204；其余非 `/api` 路径按 public 目录静态服务（无扩展名路径映射同名 `.html`，如 `/login`）；未命中 → 404 text/plain。
 - 404 也发生在 API 路径 GET 到带方法限制的路由上（落兜底）。
 - 所有静态响应 `cache-control: no-store`。
+
+> **M5 之后的实际行为**（旧 `public/` 已退役，本节记录的是迁移期行为）：静态根改为 `apps/web/dist`；`/api` 与 `/api/*`、以及非 GET/HEAD 的请求直接返回 **404 JSON `{ code:'NOT_FOUND', message:'接口不存在' }`**，不再落 SPA fallback；无扩展名路径（`/`、`/login`）统一回落 `apps/web/dist/index.html`。见 [m5-verification 最终清理记录](./m5-verification.md)。
+
+## 8. M5 收口后新增与变更的路由
+
+**本节不属于 M0 冻结基线**，是迁移收口与探索选歌（ADR-0005）之后的路由现状补充。核对代码：`apps/api/src/events/events.controller.ts`、`listening.controller.ts`、`preparation/discovery-selection.ts`。
+
+| 路由 | 方法 | 成功 | 失败/边界 | 字段合同 |
+| --- | --- | --- | --- | --- |
+| `/api/events` | GET（SSE） | `200 text/event-stream`，`cache-control: no-store`、`x-accel-buffering: no` | — | 消息 `{ v:1, seq(单调), type, sessionId?, epoch?, segueId?, transitionId?, state?, code?, message?, degraded? }`；**不承诺 Last-Event-ID 重放**，重连后自行拉 `session`/`feedback`/`settings`/`dj/jobs/:id` 快照 |
+| `/api/events/_diag` | GET | `200 { ok, connections, seq }` | — | 连接与序号诊断，供测试钩子使用 |
+| `/api/plays/history` | GET | `200 { ok:true, automatic, recent }` | — | `automatic` 是最近 50 条自动歌曲 `{ track_id, selection_source }`（跨会话/重启保留，用于 50/50 比例）；`recent` 是最近播放记录 |
+
+`/api/plays/start` 的请求体新增两个可选字段（ADR-0005）：`selectionId`（服务端登记的选歌归属，用于按实例幂等记账）与 `playInstanceId`（首次实际出声的实例标识，截断至 200 字符去重）。`sessionId` 对应的会话已结束或不存在 → `409 { ok:false, code:'session_ended' }`。**手动点播不携带 `selectionId`**，因此不计入 50/50 比例；DJ 不走歌曲记录。
+
+`/api/queue/refill`、`/api/plan` 的 `picks` 条目现在额外携带 `selectionId` 与 `selectionSource`（`library` / `discovery`），归属在准备时由服务端固定并写入 `selections` 表，后续歌单变化不回写历史。没有 `selections` 记录时来源按未知处理，不补造比例。

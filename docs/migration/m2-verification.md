@@ -2,6 +2,8 @@
 
 日期：2026-09-17。基线：M1 完成后的工作区。
 
+> 这是该阶段的历史记录。下面「未完成与边界」里的遗留项已在 [M5 验证报告](./m5-verification.md) 处理，最终状态以 M5 及其文末「剩余待验收」为准。
+
 ## 1. 迁移内容
 
 按 Persistence/Config → Music/Codex → Preparation/DJ → Listening/Controllers 顺序迁入 `apps/api`：

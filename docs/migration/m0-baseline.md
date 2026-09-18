@@ -38,3 +38,7 @@
 - 路由合同：`docs/migration/route-contract.md`（含旧路由方法限制的真实行为）。
 - 数据/配置路径：`docs/migration/data-config-paths.md`。
 - 行为合同：实施文档 §5；队列归属按 ADR-0003 不变（新 ADR-0004 不推翻它）。
+
+---
+
+> 本文引用的 `.scratch/` 证据文件属本机工作区，未随仓库分发；克隆中这些链接不可用。

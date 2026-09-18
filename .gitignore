@@ -1,6 +1,7 @@
 node_modules/
 data/
-.scratch/radio-agent/verification/logs/
+# 本地 scratch 与 issue tracker：本机工作区，不入版本控制
+.scratch/
 .DS_Store
 *.log
 .env
