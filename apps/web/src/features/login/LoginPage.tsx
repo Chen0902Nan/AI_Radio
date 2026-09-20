@@ -1,14 +1,12 @@
 // 扫码登录页（迁移自 public/login.html + login.js）：只在用户本人操作时使用，
 // 凭据由服务端保存。二维码约 5 分钟失效，提前换一张避免扫到过期码。
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useSyncExternalStore } from 'react'
+import { LoginLifecycle } from '../../orchestration/login-lifecycle'
 
-const POLL_INTERVAL_MS = 2500
-const QR_REFRESH_MS = 4 * 60 * 1000
-
-async function loginRequest(path: string) {
+async function loginRequest(path: string, signal: AbortSignal): Promise<unknown> {
   let res: Response
   try {
-    res = await fetch(path)
+    res = await fetch(path, { signal })
   } catch (_) {
     throw new Error('无法连接登录服务，请检查后端服务是否已启动，然后重试。')
   }
@@ -26,67 +24,15 @@ async function loginRequest(path: string) {
 }
 
 export function LoginPage() {
-  const [qrImg, setQrImg] = useState<string | null>(null)
-  const [status, setStatus] = useState('正在获取二维码…')
-  const keyRef = useRef<string | null>(null)
-  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null)
-  const expireTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const stop = useCallback(() => {
-    if (pollTimer.current) clearInterval(pollTimer.current)
-    if (expireTimer.current) clearTimeout(expireTimer.current)
-    pollTimer.current = null
-    expireTimer.current = null
-  }, [])
-
-  const start = useCallback(
-    async (reason?: string) => {
-      stop()
-      keyRef.current = null
-      setQrImg(null)
-      setStatus(reason ? reason + '，正在获取新二维码…' : '正在获取二维码…')
-      try {
-        const data = await loginRequest('/api/login/qr')
-        keyRef.current = data.key
-        setQrImg(data.qrimg)
-        setStatus('请用网易云音乐 App 扫码，并在手机上确认登录。')
-        pollTimer.current = setInterval(poll, POLL_INTERVAL_MS)
-        // 网易二维码约 5 分钟失效；提前换一张，避免扫到过期码。
-        expireTimer.current = setTimeout(() => void start('二维码即将过期'), QR_REFRESH_MS)
-      } catch (err) {
-        setStatus('获取二维码失败：' + (err as Error).message)
-      }
-    },
-    [stop],
-  )
-
-  async function poll() {
-    if (!keyRef.current) return
-    try {
-      const data = await loginRequest('/api/login/poll?key=' + encodeURIComponent(keyRef.current))
-      if (data.code === 800) {
-        void start('二维码已过期')
-        return
-      }
-      if (data.code === 802) {
-        setStatus('已扫码，请在手机上确认。')
-        return
-      }
-      if (data.code === 803) {
-        stop()
-        setStatus(`登录成功：${data.account ? data.account.nickname : ''}，3 秒后返回播放器…`)
-        setTimeout(() => (window.location.href = '/'), 3000)
-      }
-    } catch (_) {
-      /* 轮询失败继续重试 */
-    }
-  }
-
+  const lifecycle = useMemo(() => new LoginLifecycle({
+    request: loginRequest,
+    navigate: () => { window.location.href = '/' },
+  }), [])
+  const { qrImg, status } = useSyncExternalStore(lifecycle.subscribe, lifecycle.getSnapshot, lifecycle.getSnapshot)
   useEffect(() => {
-    void start()
-    return stop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    void lifecycle.start()
+    return lifecycle.dispose
+  }, [lifecycle])
 
   return (
     <main className="mx-auto max-w-[520px] px-5 pb-[60px] pt-7">
@@ -101,7 +47,7 @@ export function LoginPage() {
       <div className="min-h-5 border-l-[3px] border-line py-1.5 pl-2.5 text-[13px] text-dim">{status}</div>
       <button
         className="mt-3 rounded-[9px] border border-line px-3 py-1.5 text-[13px] text-ink hover:border-[#3c4254]"
-        onClick={() => void start('手动刷新')}
+        onClick={() => void lifecycle.start('手动刷新')}
       >
         {qrImg ? '二维码过期了？点这里换一张' : '重新获取二维码'}
       </button>

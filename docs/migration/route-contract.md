@@ -54,7 +54,7 @@
 
 | 路由 | 方法 | 成功 | 失败/边界 | 字段合同 |
 | --- | --- | --- | --- | --- |
-| `/api/dj/prepare` | POST | 200 `{ ok:true, job, reused? }` | 校验失败 → 400 `code:'invalid_request'`；payload 冲突 → 409 `code:'payload_conflict'`；冷却/阻塞 → 429（`cooldown_active` 或 `*_blocked`）；其他失败 → 502 | job 形状见 program-contract `validateSegueJob`（`{ segueId, state, stage, createdAt, updatedAt, transition, script?, audio? }`） |
+| `/api/dj/prepare` | POST | 200 `{ ok:true, job, reused? }` | 校验失败 → 400 `code:'invalid_request'`；payload 冲突 → 409 `code:'payload_conflict'`；会话不存在/已结束/不匹配 → 409 `session_ended`；顺序过期 → 409 `stale_epoch`；冷却/阻塞 → 429（`cooldown_active` 或 `*_blocked`）；其他失败 → 502 | job 形状见 program-contract `validateSegueJob`（`{ segueId, state, stage, createdAt, updatedAt, transition, script?, audio? }`） |
 | `/api/dj/jobs/:id` | GET | 200 `{ ok:true, job }` | 未知 → 404 `code:'not_found'`；过期 → 404 `code:'expired'` | 轮询间隔 2s、截止 170s（客户端） |
 | `/api/dj/jobs/:id/cancel` | POST | 200 `{ ok:true, cancelled }` | 幂等：未知任务也返回 `cancelled:false` | — |
 | `/api/dj/audio/:assetId` | 任意 | 200/206 `audio/mpeg`（`accept-ranges: bytes`, `cache-control: no-store`） | 未知/路径穿越 → 404 `{ code:'asset_not_found' }`；Range 非法 → 416 `{ 'content-range': 'bytes */<total>' }` | 本地文件流；拒绝缓存目录之外资产 |
@@ -101,3 +101,13 @@
 `/api/plays/start` 的请求体新增两个可选字段（ADR-0005）：`selectionId`（服务端登记的选歌归属，用于按实例幂等记账）与 `playInstanceId`（首次实际出声的实例标识，截断至 200 字符去重）。`sessionId` 对应的会话已结束或不存在 → `409 { ok:false, code:'session_ended' }`。**手动点播不携带 `selectionId`**，因此不计入 50/50 比例；DJ 不走歌曲记录。
 
 `/api/queue/refill`、`/api/plan` 的 `picks` 条目现在额外携带 `selectionId` 与 `selectionSource`（`library` / `discovery`），归属在准备时由服务端固定并写入 `selections` 表，后续歌单变化不回写历史。没有 `selections` 记录时来源按未知处理，不补造比例。
+
+### DJ 请求顺序补充（2026-09-20）
+
+`POST /api/dj/prepare` 的 `epoch` 和新增 `transitionSeq` 均为必填非负安全整数；缺失序号、字符串或非法数字返回 400 `invalid_request`。`transitionId` 不用于排序。同一 `(epoch, transitionSeq)` 的重复请求复用任务；改变身份、目标或文案上下文返回 409 `payload_conflict`。同一版本内更旧机会以及更旧版本均在供应商调用前返回 409 `stale_epoch`。
+
+`GET /api/session` 与 `POST /api/session/start` 的 `session` 对象增加 `highest_epoch` 和 `transition_seq`（旧库分别初始化为 0/-1）。页面刷新后复用开放会话但不自动播放；再次开播先恢复更高的共同版本再发起补歌或 DJ 准备。服务端完成/回收任务不清除持久顺序，停止会话后不允许复用其任务。
+
+### 反馈读取空值兼容（2026-09-20）
+
+`GET /api/feedback` 的 `active[].track_name` 可为字符串、null 或缺省；没有歌曲名的旧记录仍是合法反馈。共享 HTTP 解析器保留 null，展示层使用“未命名歌曲”。对象、数组等错误类型仍拒绝，不把非法值强制转字符串。

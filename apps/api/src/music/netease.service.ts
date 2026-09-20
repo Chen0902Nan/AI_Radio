@@ -14,12 +14,14 @@ import * as crypto from 'node:crypto'
 // 上游社区包保持 CommonJS require 形态（不重新声明其类型）
 import { createRequire } from 'node:module'
 import { DATA_DIR, NCM_TMP_DIR, SESSION_FILE } from '../config/app-config'
+import { body, record, list, text, integer, identifier, tracks as parseTracks, playlist as parsePlaylist, source as parseSource } from './netease-boundary'
 
 const req2 = createRequire(__filename)
-const api = req2('@neteasecloudmusicapienhanced/api')
-const generateConfig = req2('@neteasecloudmusicapienhanced/api/generateConfig')
-const { getXeapiPublicKey } = req2('@neteasecloudmusicapienhanced/api/util/xeapiKey')
-const { generateRandomChineseIP } = req2('@neteasecloudmusicapienhanced/api/util/index')
+// This untyped CommonJS package is constrained at entry; every response stays unknown.
+const api: Record<string, (input: Record<string, unknown>) => Promise<unknown>> = req2('@neteasecloudmusicapienhanced/api')
+const generateConfig: () => Promise<void> = req2('@neteasecloudmusicapienhanced/api/generateConfig')
+const { getXeapiPublicKey }: { getXeapiPublicKey: (current: Record<string, unknown>, device: unknown) => Promise<unknown> } = req2('@neteasecloudmusicapienhanced/api/util/xeapiKey')
+const { generateRandomChineseIP }: { generateRandomChineseIP: () => string } = req2('@neteasecloudmusicapienhanced/api/util/index')
 
 export interface Track {
   id: number
@@ -29,6 +31,12 @@ export interface Track {
   durationMs: number
   fee?: number
   mvId?: number
+}
+
+export interface PlaylistSummary extends Record<string, unknown> {
+  id: number
+  name: string
+  trackCount: number
 }
 
 export interface ResolvedTrack {
@@ -83,8 +91,7 @@ export class NeteaseService {
       if (tracks.length !== ids.length) complete = false
     } catch (_) { complete = false }
     try {
-      const uid = Number(session.profile?.userId || (await this.whoami())?.userId)
-      if (!uid) throw new Error('无法确认账号')
+      const uid = identifier(session.profile?.userId ?? (await this.whoami())?.userId)
       const playlists = await this.getUserPlaylists(session.cookie, uid)
       if (!playlists.complete) complete = false
       for (const pl of [...playlists.created, ...playlists.collected]) {
@@ -102,23 +109,17 @@ export class NeteaseService {
       return {tracks, complete: true}
     }
     previous?.tracks.forEach(t => { if (!known.has(t.id)) known.set(t.id, t) })
-    return { tracks: [...known.values()], complete: Boolean(previous), message: previous ? '歌单资料暂未更新，使用上次完整记录及已确认歌曲' : '歌单资料未读完整，暂缓探索，先播放已确认歌曲' }
+    return { tracks: [...known.values()], complete: false, message: previous ? '歌单资料暂未更新，暂缓探索，使用上次已知记录及已确认歌曲' : '歌单资料未读完整，暂缓探索，先播放已确认歌曲' }
   }
 
   async discoveryCandidates(seedIds: number[]): Promise<{ tracks: Track[]; message?: string }> {
     const {cookie} = this.requireSession()
     const results = await Promise.allSettled([
-      api.recommend_songs({cookie, timeout: 15000}).then((r: any) => {
-        if (r.body.code !== 200 || !Array.isArray(r.body.data?.dailySongs)) throw new Error('推荐歌曲不可用')
-        return r.body.data.dailySongs.map(normalizeTrack) as Track[]
-      }),
-      ...seedIds.slice(0, 4).map(id => api.simi_song({id, cookie, timeout: 15000}).then((r: any) => {
-        if (r.body.code !== 200 || !Array.isArray(r.body.songs)) throw new Error('相似歌曲不可用')
-        return r.body.songs.map(normalizeTrack) as Track[]
-      })),
+      api.recommend_songs({cookie, timeout: 15000}).then(r => parseTracks(record(body(r).data, '推荐数据').dailySongs)),
+      ...seedIds.slice(0, 4).map(id => api.simi_song({id, cookie, timeout: 15000}).then(r => parseTracks(body(r).songs))),
     ])
     const tracks = new Map<number, Track>()
-    for (const result of results) if (result.status === 'fulfilled') for (const t of result.value as Track[]) {
+    for (const result of results) if (result.status === 'fulfilled') for (const t of result.value) {
       if (Number.isSafeInteger(t.id) && t.id > 0) tracks.set(t.id, t)
     }
     return {tracks: [...tracks.values()], message: results.some(r => r.status === 'rejected') ? '部分探索来源不可用，使用已取得的候选' : undefined}
@@ -161,7 +162,7 @@ export class NeteaseService {
       g.cnIp = g.cnIp || generateRandomChineseIP()
       let current: Record<string, unknown> = {}
       try {
-        current = JSON.parse(fs.readFileSync(path.join(TMP, 'xeapi_public_key'), 'utf-8'))
+        current = record(JSON.parse(fs.readFileSync(path.join(TMP, 'xeapi_public_key'), 'utf-8')), '公钥配置')
       } catch (_) {}
       if (!current.sk) {
         const key = await getXeapiPublicKey(current, g.deviceId || '')
@@ -181,9 +182,11 @@ export class NeteaseService {
 
   loadSession(): { cookie: string; savedAt: string; profile: Record<string, unknown> | null } | null {
     try {
-      const raw = JSON.parse(fs.readFileSync(SESSION_FILE, 'utf-8'))
+      const raw = record(JSON.parse(fs.readFileSync(SESSION_FILE, 'utf-8')), '登录态')
       if (raw && typeof raw.cookie === 'string' && raw.cookie.includes('MUSIC_U')) {
-        return raw
+        const profile = raw.profile == null ? null : record(raw.profile, '账号')
+        if (profile) identifier(profile.userId)
+        return { cookie: raw.cookie, savedAt: text(raw.savedAt, 'savedAt'), profile }
       }
     } catch (_) {}
     return null
@@ -214,59 +217,52 @@ export class NeteaseService {
 
   async qrCreate(): Promise<Record<string, unknown>> {
     await this.init()
-    const keyRes = await api.login_qr_key({})
-    const key = keyRes.body && keyRes.body.data && keyRes.body.data.unikey
+    const keyData = record(body(await api.login_qr_key({})).data, '二维码数据')
+    const key = text(keyData.unikey, '二维码 key')
     if (!key) throw new Error('未能取得二维码 key')
-    const qrRes = await api.login_qr_create({ key, qrimg: true, platform: 'web' })
-    return { key, ...qrRes.body.data }
+    const data = record(body(await api.login_qr_create({ key, qrimg: true, platform: 'web' })).data, '二维码数据')
+    return { key, qrimg: text(data.qrimg, '二维码图片'), qrurl: text(data.qrurl, '二维码链接') }
   }
 
   async qrCheck(key: string): Promise<{ code: number; message: string; account?: Record<string, unknown> | null }> {
     await this.init()
-    const res = await api.login_qr_check({ key })
-    const body = res.body || {}
-    const code = body.code
-    if (code === 803) {
-      const cookie = body.cookie || (res.cookie || []).join(';')
-      const account = await api.user_account({ cookie })
-      const profile = (account.body && account.body.profile) || null
-      this.saveSession(cookie, profile)
-      const me = await this.whoami()
-      return { code, message: body.message || '', account: me }
-    }
-    return { code, message: body.message || '' }
+    const response = record(await api.login_qr_check({ key }))
+    const data = body(response, false)
+    const code = integer(data.code, '登录状态')
+    const message = data.message === undefined ? '' : text(data.message, '登录消息')
+    if (code !== 803) return { code, message }
+    const cookie = data.cookie === undefined
+      ? list(response.cookie, '登录 cookie').map(value => text(value, 'cookie')).join(';')
+      : text(data.cookie, '登录 cookie')
+    if (!cookie.includes('MUSIC_U')) throw new Error('登录 cookie 无效')
+    const account = body(await api.user_account({ cookie }))
+    const profile = account.profile == null ? null : record(account.profile, '账号')
+    if (profile) identifier(profile.userId)
+    this.saveSession(cookie, profile)
+    return { code, message, account: await this.whoami() }
   }
 
   async whoami(): Promise<{ userId: number; nickname: string; vipType: number; savedAt: string } | null> {
     const session = this.loadSession()
     if (!session) return null
     try {
-      const res = await api.login_status({ cookie: session.cookie })
-      const profile = res.body && res.body.data && res.body.data.profile as Record<string, unknown> | undefined
-      if (!profile) return null
+      const response = record(await api.login_status({ cookie: session.cookie }))
+      const data = record(record(response.body, '登录状态').data, '账号数据')
+      if (integer(data.code, '登录状态码') !== 200) return null
+      const profile = record(data.profile, '账号')
       return {
-        userId: profile.userId as number,
-        nickname: profile.nickname as string,
-        vipType: profile.vipType as number,
-        savedAt: session.savedAt,
+        userId: identifier(profile.userId), nickname: text(profile.nickname, '昵称'),
+        vipType: integer(profile.vipType, 'vipType'), savedAt: session.savedAt,
       }
-    } catch (_) {
-      return null
-    }
+    } catch (_) { return null }
   }
 
   /* ---------- 音乐资料（只读） ---------- */
 
   /** 红心歌曲：likelist 一次返回全部 id，无分页。 */
   async getLikedIds(cookie: string): Promise<number[]> {
-    const res = await api.likelist({ uid: 0, cookie, timeout: 15000 })
-    if (res.body.code !== 200) {
-      throw new Error(`likelist 失败 code=${res.body.code}`)
-    }
-    if (!Array.isArray(res.body.ids)) throw new Error('红心资料缺少歌曲列表')
-    const ids: unknown[] = res.body.ids
-    if (ids.some(id => !Number.isSafeInteger(Number(id)) || Number(id) <= 0)) throw new Error('红心歌曲标识无效')
-    return [...new Set(ids.map(Number))]
+    const data = body(await api.likelist({ uid: 0, cookie, timeout: 15000 }))
+    return [...new Set(list(data.ids, '红心歌曲列表').map(identifier))]
   }
 
   /**
@@ -279,14 +275,15 @@ export class NeteaseService {
    * 因此按「实际返回条数」推进 offset，并靠去重保证不会重复，而不是靠 more/limit。
    */
   async getUserPlaylists(cookie: string, uid: number, { pageSize = 50, maxPages = 40 } = {}): Promise<{
-    collected: Record<string, unknown>[]
-    created: Record<string, unknown>[]
+    collected: PlaylistSummary[]
+    created: PlaylistSummary[]
     pages: Record<string, unknown>[]
     total: number
     complete: boolean
   }> {
-    const collected: Record<string, unknown>[] = []
-    const created: Record<string, unknown>[] = []
+    identifier(uid)
+    const collected: PlaylistSummary[] = []
+    const created: PlaylistSummary[] = []
     const seen = new Set<string>()
     const log: Record<string, unknown>[] = []
     let offset = 0
@@ -294,14 +291,11 @@ export class NeteaseService {
     let complete = false
 
     while (pages < maxPages) {
-      const res = await api.user_playlist({ uid, limit: pageSize, offset, cookie, timeout: 15000 })
-      if (res.body.code !== 200) {
-        throw new Error(`user_playlist 失败 code=${res.body.code} offset=${offset}`)
-      }
-      if (!Array.isArray(res.body.playlist)) throw new Error('歌单资料缺少列表')
-      const list: Record<string, unknown>[] = res.body.playlist
+      const data = body(await api.user_playlist({ uid, limit: pageSize, offset, cookie, timeout: 15000 }))
+      const playlists = list(data.playlist, '歌单列表').map(parsePlaylist)
+      if (typeof data.more !== 'boolean') throw new Error('歌单分页标记无效')
       let added = 0
-      for (const pl of list) {
+      for (const pl of playlists) {
         const key = `${pl.userId}:${pl.id}`
         if (seen.has(key)) continue
         seen.add(key)
@@ -319,13 +313,13 @@ export class NeteaseService {
         if (pl.subscribed || pl.userId !== uid) collected.push(item)
         else created.push(item)
       }
-      log.push({ offset, returned: list.length, added, more: res.body.more })
+      log.push({ offset, returned: playlists.length, added, more: data.more })
       pages += 1
 
-      if (list.length === 0) { complete = res.body.more !== true; break }
+      if (playlists.length === 0) { complete = data.more !== true; break }
       if (added === 0) break
-      if (res.body.more !== true && list.length < pageSize) { complete = true; break }
-      offset += list.length
+      if (data.more !== true && playlists.length < pageSize) { complete = true; break }
+      offset += playlists.length
     }
 
     return { collected, created, pages: log, total: collected.length + created.length, complete }
@@ -341,25 +335,21 @@ export class NeteaseService {
     returned: number
     tracks: Track[]
   }> {
-    const detail = await api.playlist_detail({ id: playlistId, cookie, timeout: 15000 })
-    if (detail.body.code !== 200) {
-      throw new Error(`playlist_detail 失败 id=${playlistId} code=${detail.body.code}`)
-    }
-    const pl = detail.body.playlist
-    if (!pl || !Number.isSafeInteger(pl.trackCount) || pl.trackCount < 0) throw new Error('歌单资料缺少完整曲目数')
-    const trackIds = (pl.trackIds || []).map((t: { id: number }) => t.id)
+    const detail = body(await api.playlist_detail({ id: playlistId, cookie, timeout: 15000 }))
+    const pl = record(detail.playlist, '歌单详情')
+    const trackCount = integer(pl.trackCount, '完整曲目数')
+    const trackIds = list(pl.trackIds, '歌单曲目').map(value => identifier(record(value, '歌曲').id))
     let ids = trackIds
     let via = 'playlist_detail.trackIds'
-    if (!ids.length || (pl.trackCount && ids.length < pl.trackCount)) {
+    if (!ids.length || (trackCount && ids.length < trackCount)) {
       via = 'playlist_track_all'
       ids = []
       let offset = 0
-      while (offset < (pl.trackCount || 0) + 1) {
-        const res = await api.playlist_track_all({ id: playlistId, limit: chunk, offset, cookie, timeout: 15000 })
-        if (res.body?.code !== 200) throw new Error('歌单分页读取失败')
-        const songs = (res.body && res.body.songs) || []
+      while (offset < (trackCount || 0) + 1) {
+        const data = body(await api.playlist_track_all({ id: playlistId, limit: chunk, offset, cookie, timeout: 15000 }))
+        const songs = parseTracks(data.songs)
         if (!songs.length) break
-        ids.push(...songs.map((s: { id: number }) => s.id))
+        ids.push(...songs.map(song => song.id))
         offset += chunk
         if (songs.length < chunk) break
       }
@@ -369,17 +359,14 @@ export class NeteaseService {
     const tracks: Track[] = []
     for (let i = 0; i < unique.length; i += chunk) {
       const slice = unique.slice(i, i + chunk)
-      const res = await api.song_detail({ ids: slice.join(','), cookie, timeout: 15000 })
-      if (res.body.code !== 200) {
-        throw new Error(`song_detail 失败 code=${res.body.code}`)
-      }
-      const byId = new Map<number, Record<string, unknown>>((res.body.songs || []).map((s: Record<string, unknown>) => [s.id as number, s]))
-      for (const id of slice as number[]) {
+      const data = body(await api.song_detail({ ids: slice.join(','), cookie, timeout: 15000 }))
+      const byId = new Map(parseTracks(data.songs).map(song => [song.id, song]))
+      for (const id of slice) {
         const s = byId.get(id)
-        if (s) tracks.push(normalizeTrack(s))
+        if (s) tracks.push(s)
       }
     }
-    return { via, trackCount: pl.trackCount, returned: tracks.length, tracks }
+    return { via, trackCount: trackCount, returned: tracks.length, tracks }
   }
 
   /** 红心 id 批量取歌曲详情（song_detail 单次上限 1000，按 300 分块）。 */
@@ -387,14 +374,11 @@ export class NeteaseService {
     const tracks: Track[] = []
     for (let i = 0; i < ids.length; i += chunk) {
       const slice = ids.slice(i, i + chunk)
-      const res = await api.song_detail({ ids: slice.join(','), cookie, timeout: 15000 })
-      if (res.body.code !== 200) {
-        throw new Error(`song_detail 失败 code=${res.body.code} offset=${i}`)
-      }
-      const byId = new Map<number, Record<string, unknown>>((res.body.songs || []).map((s: Record<string, unknown>) => [s.id as number, s]))
-      for (const id of slice as number[]) {
+      const data = body(await api.song_detail({ ids: slice.join(','), cookie, timeout: 15000 }))
+      const byId = new Map(parseTracks(data.songs).map(song => [song.id, song]))
+      for (const id of slice) {
         const s = byId.get(id)
-        if (s) tracks.push(normalizeTrack(s))
+        if (s) tracks.push(s)
       }
     }
     return tracks
@@ -451,7 +435,7 @@ export class NeteaseService {
    *  - none  无地址（无权限 / 未上架 / 地区限制）
    */
   async resolveTrack(id: number | string, { force = false } = {}): Promise<ResolvedTrack> {
-    const key = Number(id)
+    const key = identifier(Number(id))
     if (process.env.RADIO_TEST_HOOKS === '1' && this.injectedResolveErrors > 0) {
       this.injectedResolveErrors -= 1
       const err = new Error('（测试注入）音源接口失败') as Error & { code: string }
@@ -474,12 +458,19 @@ export class NeteaseService {
       if (cached) return { ...cached, cached: true }
     }
 
-    // 注入点只替换「上游返回了什么」，后面的分类与缓存处理必须和真实路径完全一致；
-    // 否则测试就变成自己验证自己，测不出缓存失效这类下游缺陷。
-    let upstream: Record<string, unknown>
+    const upstream = await this.sourceResponse(key, cookie)
+    const info = parseSource(upstream, key, identity)
+    // 地址有效则写入缓存；刷新后确认不可播放/无地址，必须把旧条目删掉，
+    // 否则下一次普通查询又会命中已经不成立的旧地址。
+    if (info.url) this.urlCache.set(key, info)
+    else this.urlCache.delete(key)
+    return info
+  }
+  /** Fault injection and real responses share the same downstream parser and cache policy. */
+  private async sourceResponse(key: number, cookie: string): Promise<Record<string, unknown>> {
     if (process.env.RADIO_TEST_HOOKS === '1' && this.injectedUnplayable > 0) {
       this.injectedUnplayable -= 1
-      upstream = {
+      return {
         injected: true,
         url: null,
         br: 0,
@@ -490,49 +481,10 @@ export class NeteaseService {
         freeTrialInfo: null,
         expi: 0,
       }
-    } else {
-      const res = await api.song_url_v1({ id: key, level: 'exhigh', cookie, timeout: 15000 })
-      if (res.body.code !== 200) {
-        throw new Error(`song_url_v1 失败 code=${res.body.code}`)
-      }
-      upstream = (res.body.data || [])[0] || {}
     }
+    const data = body(await api.song_url_v1({ id: key, level: 'exhigh', cookie, timeout: 15000 }))
+    return record(list(data.data, '音源列表')[0], '音源')
 
-    const trial = upstream.freeTrialInfo && Object.keys(upstream.freeTrialInfo).length > 0
-    const kind = !upstream.url ? 'none' : trial ? 'trial' : 'full'
-    const info: ResolvedTrack & { identity: string } = {
-      id: key,
-      kind: kind as ResolvedTrack['kind'],
-      identity,
-      injected: Boolean(upstream.injected),
-      url: (upstream.url as string) || null,
-      br: (upstream.br as number) || 0,
-      size: (upstream.size as number) || 0,
-      type: (upstream.type as string) || null,
-      level: (upstream.level as string) || null,
-      fee: upstream.fee as number | undefined,
-      freeTrialInfo: trial ? (upstream.freeTrialInfo as Record<string, unknown>) : null,
-      expiresAt: Date.now() + Math.max(0, ((upstream.expi as number) || 1200) - 30) * 1000,
-      cached: false,
-    }
-    // 地址有效则写入缓存；刷新后确认不可播放/无地址，必须把旧条目删掉，
-    // 否则下一次普通查询又会命中已经不成立的旧地址。
-    if (info.url) this.urlCache.set(key, info)
-    else this.urlCache.delete(key)
-    return info
   }
-}
 
-function normalizeTrack(s: Record<string, unknown>): Track {
-  const ar = (s.ar || s.artists || []) as Array<{ name: string }>
-  const al = (s.al || s.album || {}) as { name?: string }
-  return {
-    id: s.id as number,
-    name: s.name as string,
-    artists: ar.map((a) => a.name).join(' / '),
-    album: al.name || '',
-    durationMs: (s.dt as number) || (s.duration as number) || 0,
-    fee: s.fee as number,
-    mvId: (s.mv as number) || 0,
-  }
 }

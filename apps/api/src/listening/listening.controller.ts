@@ -9,6 +9,14 @@ import { EventsService } from '../events/events.service'
 import { DjPipelineService } from '../dj/dj-pipeline.service'
 import { sendJson } from '../http/json.util'
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function hasOptionalText<T extends string>(body: Record<string, unknown>, fields: readonly T[]): body is Record<string, unknown> & Partial<Record<T, string | null>> {
+  return fields.every(field => body[field] == null || typeof body[field] === 'string')
+}
+
 @Controller('api')
 export class ListeningController {
   constructor(
@@ -61,17 +69,23 @@ export class ListeningController {
 
   @Post('feedback')
   @HttpCode(200)
-  addFeedback(@Res() res: Response, @Body() body: Record<string, unknown>): void {
+  addFeedback(@Res() res: Response, @Body() body: unknown): void {
+    if (!isObject(body) || !hasOptionalText(body, ['trackName', 'artists', 'source'])) {
+      return sendJson(res, 400, { ok: false, code: 'invalid_request', message: 'trackName、artists 和 source 必须是文本或 null' })
+    }
+    if (body.sentiment !== 'like' && body.sentiment !== 'dislike') {
+      return sendJson(res, 400, { ok: false, code: 'invalid_request', message: 'sentiment 必须是 like 或 dislike' })
+    }
     const trackId = Number(body.trackId)
     if (!Number.isSafeInteger(trackId) || trackId <= 0) return sendJson(res, 400, { ok: false, message: '缺少 trackId' })
     try {
       const session = this.db.getOpenSession()
       const row = this.db.addFeedback({
         trackId,
-        trackName: body.trackName as string,
-        artists: body.artists as string,
-        sentiment: body.sentiment as string,
-        source: (body.source as string) || 'ui',
+        trackName: body.trackName,
+        artists: body.artists,
+        sentiment: body.sentiment,
+        source: body.source || 'ui',
         sessionId: session ? (session.id as string) : null,
       })
       sendJson(res, 200, { ok: true, feedback: row, summary: this.db.feedbackSummary() })
@@ -114,7 +128,10 @@ export class ListeningController {
 
   @Post('plays/start')
   @HttpCode(200)
-  playStart(@Res() res: Response, @Body() body: Record<string, unknown>): void {
+  playStart(@Res() res: Response, @Body() body: unknown): void {
+    if (!isObject(body) || !hasOptionalText(body, ['trackName', 'artists', 'sessionId', 'selectionId', 'playInstanceId'])) {
+      return sendJson(res, 400, { ok: false, code: 'invalid_request', message: '播放名称和标识字段必须是文本或 null' })
+    }
     const trackId = Number(body.trackId)
     if (!Number.isSafeInteger(trackId) || trackId <= 0) return sendJson(res, 400, { ok: false, message: '缺少 trackId' })
     if (body.sessionId && !this.db.getSession(String(body.sessionId))) return sendJson(res, 409, { ok: false, code: 'session_ended' })
@@ -126,8 +143,8 @@ export class ListeningController {
       trackId,
       selectionId: typeof body.selectionId === 'string' ? body.selectionId : null,
       playInstanceId: typeof body.playInstanceId === 'string' ? body.playInstanceId.slice(0, 200) : null,
-      trackName: body.trackName as string,
-      artists: body.artists as string,
+      trackName: body.trackName,
+      artists: body.artists,
     })
     sendJson(res, 200, { ok: true, playId, session })
   }

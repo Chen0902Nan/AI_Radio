@@ -9,6 +9,8 @@ import { randomUUID } from 'node:crypto'
 import { DatabaseSync } from 'node:sqlite'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import type { PrepareRequest } from '@radio/contracts'
+import { compareOrder, prepareFingerprint, type OrderResult } from '../dj/request-order'
 import { DB_FILE } from '../config/app-config'
 
 const DEFAULT_SETTINGS: Record<string, string> = {
@@ -85,6 +87,10 @@ export class DbService implements OnModuleInit {
     this.db.exec(`CREATE TABLE IF NOT EXISTS selections (
       id TEXT PRIMARY KEY, track_id INTEGER NOT NULL, source TEXT NOT NULL, created_at INTEGER NOT NULL
     )`)
+    const sessionColumns = new Set(this.db.prepare('PRAGMA table_info(sessions)').all().map(c => c.name))
+    for (const [name, type] of [['highest_epoch', 'INTEGER NOT NULL DEFAULT 0'], ['transition_seq', 'INTEGER NOT NULL DEFAULT -1'], ['transition_payload', 'TEXT']]) {
+      if (!sessionColumns.has(name)) this.db.exec(`ALTER TABLE sessions ADD COLUMN ${name} ${type}`)
+    }
     const columns = new Set((this.db.prepare('PRAGMA table_info(plays)').all() as Array<{name: string}>).map(c => c.name))
     for (const column of ['play_instance_id', 'selection_source']) {
       if (!columns.has(column)) this.db.exec(`ALTER TABLE plays ADD COLUMN ${column} TEXT`)
@@ -209,6 +215,40 @@ export class DbService implements OnModuleInit {
     const row = this.db_.prepare('SELECT * FROM sessions WHERE ended_at IS NULL ORDER BY started_at DESC LIMIT 1').get() as Record<string, unknown> | undefined
     if (!row) return null
     return { ...row, adjustments: safeParse(row.adjustments as string) }
+  }
+
+  isOpenSession(sessionId: string): boolean {
+    return this.getOpenSession()?.id === sessionId
+  }
+
+  /** Persist the shared orchestration version before starting provider work. */
+  acceptEpoch(sessionId: string, epoch: number): boolean {
+    if (!Number.isSafeInteger(epoch) || epoch < 0 || !this.isOpenSession(sessionId)) return false
+    const session = this.getSession(sessionId)!
+    if (epoch < Number(session.highest_epoch)) return false
+    if (epoch > Number(session.highest_epoch)) {
+      this.db_.prepare('UPDATE sessions SET highest_epoch = ?, transition_seq = -1, transition_payload = NULL WHERE id = ?').run(epoch, sessionId)
+    }
+    return true
+  }
+
+  acceptDjRequest(request: PrepareRequest): OrderResult {
+    if (!this.isOpenSession(request.sessionId)) return { ok: false, code: 'session_ended', message: '收听会话不存在、已结束或不是当前会话' }
+    const session = this.getSession(request.sessionId)!
+    const order = compareOrder(request.epoch, request.transitionSeq, Number(session.highest_epoch), Number(session.transition_seq))
+    if (order < 0) return { ok: false, code: 'stale_epoch', message: '准备请求早于会话最新顺序' }
+    const payload = prepareFingerprint(request)
+    if (order === 0 && session.transition_payload !== payload) return { ok: false, code: 'payload_conflict', message: '相同顺序携带不同准备内容' }
+    this.db_.prepare('UPDATE sessions SET highest_epoch = ?, transition_seq = ?, transition_payload = ? WHERE id = ?')
+      .run(request.epoch, request.transitionSeq, payload, request.sessionId)
+    return { ok: true }
+  }
+
+  isCurrentDjRequest(request: PrepareRequest): boolean {
+    if (!this.isOpenSession(request.sessionId)) return false
+    const session = this.getSession(request.sessionId)!
+    return session.highest_epoch === request.epoch && session.transition_seq === request.transitionSeq
+      && session.transition_payload === prepareFingerprint(request)
   }
 
   /** 停止收听：结束会话并清空本次的临时调整（下次开播恢复个人默认）。 */

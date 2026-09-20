@@ -1,103 +1,19 @@
 // DJ 面板（迁移自 index.html .dj 区块 + app.js DJ 设置/试听逻辑）：
 // 开关、间隔、串场展示（完整文案 + 可点击来源）、音色试听与保存；错误提示与禁用态保留。
-import { useEffect, useState } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { useRadio, useAppStore } from '../../app/radio-context'
-import { api } from '../../api/client'
 
 export function DjPanel() {
-  const { playback, segue, store } = useRadio()
+  const { settings, preview } = useRadio()
   const app = useAppStore()
-  const [enabled, setEnabled] = useState(true)
-  const [interval, setIntervalValue] = useState('4')
-  const [previewVoice, setPreviewVoice] = useState('')
-  const [previewing, setPreviewing] = useState(false)
-  const [previewStatus, setPreviewStatus] = useState<string | null>(null)
-  const [canSave, setCanSave] = useState(false)
-
+  const config = useSyncExternalStore(settings.subscribe, settings.getSnapshot, settings.getSnapshot)
+  const audition = useSyncExternalStore(preview.subscribe, preview.getSnapshot, preview.getSnapshot)
+  const enabled = config.settings.djEnabled !== 'false'
+  const interval = config.settings.djIntervalTracks || '4'
   useEffect(() => {
-    if (app.settings.djEnabled !== undefined) setEnabled(app.settings.djEnabled !== 'false')
-    if (['3', '4', '5'].includes(app.settings.djIntervalTracks)) setIntervalValue(app.settings.djIntervalTracks)
-  }, [app.settings])
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const data = await api.settings()
-        const s = (data.settings ?? {}) as Record<string, string>
-        const voice = data.djVoice as { ready: boolean; code: string | null; message: string; voiceReferenceId: string | null } | undefined
-        store.set({ djVoice: voice ?? null })
-        const savedVoice = voice?.voiceReferenceId || s.djVoiceReferenceId
-        if (savedVoice && !previewVoice.trim()) setPreviewVoice(savedVoice)
-        setEnabled(s.djEnabled !== 'false')
-        if (['3', '4', '5'].includes(String(s.djIntervalTracks))) setIntervalValue(String(s.djIntervalTracks))
-        // 初始配置同步到串场控制器（旧 applyDjConfig 语义）
-        segue.setConfig({
-          djEnabled: s.djEnabled !== 'false',
-          djIntervalTracks: Number(s.djIntervalTracks) || 4,
-        })
-      } catch (_) {}
-    })()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  async function saveSetting(key: string, value: unknown): Promise<boolean> {
-    try {
-      const data = await api.saveSetting(key, value)
-      if (!data.ok) throw new Error(String(data.message || `HTTP ${data.status}`))
-      store.set({ djVoice: (data.djVoice as never) ?? store.get().djVoice })
-      return true
-    } catch (err) {
-      setPreviewStatus('设置保存失败：' + (err as Error).message)
-      return false
-    }
-  }
-
-  function applyConfig(patch: { djEnabled?: boolean; djIntervalTracks?: number; voiceConfigUpdated?: boolean }) {
-    segue.setConfig(patch)
-  }
-
-  async function preview() {
-    if (store.get().sessionId) {
-      setPreviewStatus('停止收听后才能试听音色，避免打断节目。')
-      return
-    }
-    const referenceId = previewVoice.trim()
-    if (!referenceId) {
-      setPreviewStatus('先填写要试听的音色 reference_id。')
-      return
-    }
-    setPreviewStatus('正在合成试听…')
-    try {
-      const data = await api.djPreview(referenceId)
-      if (!data.ok) {
-        setPreviewStatus(`试听失败（${data.code || data.status}）：${data.message || ''}`)
-        return
-      }
-      // 合成期间用户可能已经开播：迟到结果不能替换媒体
-      if (store.get().sessionId) {
-        setPreviewStatus('试听结果已过期，未打断当前收听。')
-        return
-      }
-      const audioUrl = (data.audio as { url: string }).url
-      const durationMs = (data.audio as { durationMs: number }).durationMs
-      const ok = await playback.startPreview(audioUrl)
-      if (ok) {
-        setPreviewStatus(`试听播放中（约 ${(durationMs / 1000).toFixed(1)} 秒）。满意就点「设为正式音色」。`)
-        setCanSave(true)
-      }
-    } catch (err) {
-      setPreviewStatus('试听播放失败：' + (err as Error).message)
-    }
-  }
-
-  async function saveChosen() {
-    const referenceId = previewVoice.trim()
-    if (!referenceId) return
-    if (!(await saveSetting('djVoiceReferenceId', referenceId))) return
-    setCanSave(false)
-    applyConfig({ voiceConfigUpdated: true })
-    setPreviewStatus(`已把 ${referenceId} 设为正式音色，之后的串场都会用它。`)
-  }
+    preview.initialize(config.djVoice?.voiceReferenceId || config.settings.djVoiceReferenceId || '')
+  }, [preview, config.djVoice, config.settings.djVoiceReferenceId])
+  useEffect(() => preview.stop, [preview])
 
   return (
     <section className="mb-[22px] rounded-[14px] border border-line bg-panel px-5 py-[18px]">
@@ -105,7 +21,7 @@ export function DjPanel() {
         <h2 className="text-sm font-semibold text-dim">DJ 串场</h2>
         <span className="flex items-center gap-3.5 text-xs text-dim">
           <label className="inline-flex cursor-pointer items-center gap-1.5">
-            <input type="checkbox" checked={enabled} onChange={(e) => { setEnabled(e.target.checked); void saveSetting('djEnabled', e.target.checked ? 'true' : 'false'); applyConfig({ djEnabled: e.target.checked }) }} />
+            <input type="checkbox" checked={enabled} onChange={(e) => { void settings.save('djEnabled', e.target.checked ? 'true' : 'false') }} />
             开启 DJ
           </label>
           <label className="inline-flex items-center gap-1.5">
@@ -113,7 +29,7 @@ export function DjPanel() {
             <select
               className="rounded-md border border-line bg-panel-2 px-1.5 py-0.5 text-xs text-ink"
               value={interval}
-              onChange={(e) => { setIntervalValue(e.target.value); void saveSetting('djIntervalTracks', e.target.value); applyConfig({ djIntervalTracks: Number(e.target.value) }) }}
+              onChange={(e) => { void settings.save('djIntervalTracks', e.target.value) }}
             >
               <option value="3">3</option>
               <option value="4">4</option>
@@ -145,25 +61,26 @@ export function DjPanel() {
         <input
           className="min-w-0 flex-1 rounded-lg border border-line bg-panel-2 px-2.5 py-[7px] text-[13px] text-ink placeholder:text-[#6f7688]"
           placeholder="音色 reference_id（试听用，选定后保存为正式音色）"
-          value={previewVoice}
-          onChange={(e) => setPreviewVoice(e.target.value)}
+          value={audition.voice}
+          onChange={(e) => preview.edit(e.target.value)}
         />
         <button
           className="rounded-[9px] border border-line px-3 py-1.5 text-[13px] text-ink hover:border-[#3c4254] disabled:opacity-45"
-          disabled={!canSave}
-          onClick={() => void saveChosen()}
+          disabled={!audition.canSave}
+          onClick={() => void preview.saveChosen()}
         >
           设为正式音色
         </button>
         <button
           className="rounded-[9px] border border-line px-3 py-1.5 text-[13px] text-ink hover:border-[#3c4254]"
-          onClick={() => void preview()}
+          onClick={() => void preview.preview()}
         >
           试听
         </button>
       </div>
-      {previewing && <div className="mt-2 text-xs text-dim">试听播放中…</div>}
-      {previewStatus && <div className={'mt-2 text-xs ' + (previewStatus.startsWith('试听失败') || previewStatus.startsWith('设置保存失败') ? 'text-bad' : 'text-dim')}>{previewStatus}</div>}
+      <button className="mt-2 text-xs text-dim" onClick={preview.stop}>停止试听</button>
+      {config.error && <div role="alert" className="mt-2 text-xs text-bad">{config.error}</div>}
+      {audition.status && <div className="mt-2 text-xs text-dim">{audition.status}</div>}
     </section>
   )
 }

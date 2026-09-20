@@ -3,15 +3,13 @@ export interface ProbeReport {
   at?: string
   base?: string
   checks?: Array<{ name: string; ok: unknown; detail?: unknown }>
-  evidence?: Record<string, any>
-  [field: string]: any
+  evidence?: Record<string, unknown>
+  [field: string]: unknown
 }
 
 declare global {
   interface HTMLMediaElement { webkitAudioDecodedByteCount?: number }
   interface Window {
-    /** Legacy live probes use the optional debug bridge; production code has its own contracts. */
-    __radio: any
     __naturalPlayback: NaturalPlaybackTrace
     recordRadioMediaEvent(event: Record<string, unknown>): void
   }

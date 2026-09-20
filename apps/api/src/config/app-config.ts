@@ -26,9 +26,9 @@ export function projectRoot(): string {
   return path.resolve(__dirname, '..', '..', '..', '..')
 }
 
-export const DATA_DIR = path.join(projectRoot(), 'data')
+export const DATA_DIR = process.env.RADIO_DATA_DIR || path.join(projectRoot(), 'data')
 export const DB_FILE = process.env.RADIO_DB_FILE || path.join(DATA_DIR, 'radio.db')
-export const SESSION_FILE = path.join(DATA_DIR, 'session.json')
+export const SESSION_FILE = process.env.RADIO_SESSION_FILE || path.join(DATA_DIR, 'session.json')
 export const NCM_TMP_DIR = path.join(DATA_DIR, 'ncm-tmp')
 export const DJ_AUDIO_CACHE_DIR = process.env.DJ_AUDIO_CACHE_DIR || path.join(DATA_DIR, 'dj-audio')
 

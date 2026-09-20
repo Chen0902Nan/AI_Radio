@@ -8,6 +8,7 @@ import { NeteaseService, NotLoggedInError } from './netease.service'
 import { sendJson } from '../http/json.util'
 import { TEST_HOOKS } from '../config/app-config'
 import { testFaults } from '../test-support/fault-state'
+import { forwardAudio } from './audio-forward'
 
 @Controller('api')
 export class MusicController {
@@ -48,7 +49,10 @@ export class MusicController {
   async library(@Res() res: Response): Promise<void> {
     const session = this.ncm.loadSession()
     if (!session) return sendJson(res, 401, { code: 'NOT_LOGGED_IN', message: '未登录' })
-    const uid = (session.profile && (session.profile as Record<string, unknown>).userId as number) || 0
+    const uid = session.profile?.userId
+    if (typeof uid !== 'number' || !Number.isSafeInteger(uid) || uid <= 0) {
+      return sendJson(res, 401, { code: 'NOT_LOGGED_IN', message: '登录态账号无效，请重新登录' })
+    }
     const ids = await this.ncm.getLikedIds(session.cookie)
     const tracks = await this.ncm.getLikedTracks(session.cookie, ids)
     const playlists = await this.ncm.getUserPlaylists(session.cookie, uid)
@@ -108,13 +112,15 @@ export class MusicController {
     try {
       info = await this.ncm.resolveTrack(id)
     } catch (err) {
-      const code = (err as NotLoggedInError).code
+      if (res.destroyed) return
+      const code = err instanceof NotLoggedInError ? err.code : 'resolve_error'
       sendJson(res, code === 'NOT_LOGGED_IN' ? 401 : 502, {
         code: code || 'resolve_error',
         message: (err as Error).message,
       })
       return
     }
+    if (res.destroyed || res.writableEnded) return
     if (info.kind !== 'full') {
       sendJson(res, 409, {
         code: info.kind === 'trial' ? 'trial_only' : 'unplayable',
@@ -127,51 +133,6 @@ export class MusicController {
       return
     }
 
-    const headers: Record<string, string> = {}
-    if (req.headers.range) headers.range = req.headers.range
-    headers['user-agent'] =
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36'
-
-    let upstream: globalThis.Response
-    try {
-      upstream = await fetch(info.url!, { headers, redirect: 'follow' })
-    } catch (err) {
-      sendJson(res, 502, { code: 'upstream_error', message: String((err as Error).message || err) })
-      return
-    }
-
-    if (!upstream.ok && upstream.status !== 206) {
-      sendJson(res, 502, {
-        code: 'upstream_status',
-        status: upstream.status,
-        message: `音源 CDN 返回 ${upstream.status}`,
-      })
-      return
-    }
-
-    const passHeaders: Record<string, string> = {}
-    for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag']) {
-      const v = upstream.headers.get(h)
-      if (v) passHeaders[h] = v
-    }
-    passHeaders['cache-control'] = 'no-store'
-    res.writeHead(upstream.status, passHeaders)
-    if (!upstream.body) {
-      res.end()
-      return
-    }
-    const reader = upstream.body.getReader()
-    try {
-      for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        if (!res.write(Buffer.from(value))) {
-          await new Promise((r) => res.once('drain', r))
-        }
-      }
-    } catch (_) {
-      /* 客户端中断播放 */
-    }
-    res.end()
+    await forwardAudio(req, res, info.url!)
   }
 }

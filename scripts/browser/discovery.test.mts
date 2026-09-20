@@ -8,16 +8,16 @@ import puppeteer, { type Browser } from 'puppeteer-core'
 import {moveToTrash} from '../lib/trash.mts'
 const root=path.resolve(import.meta.dirname,'../..')
 function wav(){const n=8000*20,b=Buffer.alloc(44+n*2);b.write('RIFF');b.writeUInt32LE(b.length-8,4);b.write('WAVEfmt ',8);b.writeUInt32LE(16,16);b.writeUInt16LE(1,20);b.writeUInt16LE(1,22);b.writeUInt32LE(8000,24);b.writeUInt32LE(16000,28);b.writeUInt16LE(2,32);b.writeUInt16LE(16,34);b.write('data',36);b.writeUInt32LE(n*2,40);return b}
-const song=(id: string|number)=>({id,name:'歌曲'+id,artists:'测试歌手',durationMs:20000})
+const song=(id: number)=>({id,name:'歌曲'+id,artists:'测试歌手',album:'',durationMs:20000})
 test('真实浏览器：首批等待、来源记录、停止不误播、手动歌单后自动接回混合电台',async t=>{
  let sid: string|null=null, next=10, pendingBatch: (() => void) | null=null, delay=true
- const records: { (): any; new(): any; selectionId: unknown; playInstanceId: unknown; trackId: unknown }[]=[],errors: string[]=[],clients: Set<import('node:http').ServerResponse>=new Set()
+ const records: Array<Record<string, unknown>>=[],errors: string[]=[],clients: Set<import('node:http').ServerResponse>=new Set()
  const server=http.createServer(async(req,res)=>{
   const p=new URL(req.url || '/','http://fixture').pathname
   let raw='';for await(const c of req)raw+=c;const body=raw?JSON.parse(raw):{}
-  const json=(d: { liked?: { count: number; tracks: { id: any; name: string; artists: string; durationMs: number }[] }; playlists?: { created: { id: number; name: string; trackCount: number }[]; collected: never[]; total: number }; tracks?: { id: any; name: string; artists: string; durationMs: number }[]; returned?: number; trackCount?: number; via?: string; settings?: { djEnabled: string }; active?: never[]; session?: { id: any }|{ id: string }|{ id: any }|null; picks?: { selectionId: string; selectionSource: string; id: any; name: string; artists: string; durationMs: number }[]; playId?: number; playable?: boolean; audioUrl?: string })=>{res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({ok:true,...d}))}
+  const json=(d: Record<string, unknown>)=>{res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({ok:true,...d}))}
   if(p==='/api/events'){res.writeHead(200,{'content-type':'text/event-stream'});res.write(':ok\n\n');clients.add(res);req.on('close',()=>clients.delete(res));return}
-  if(p==='/api/library')return json({liked:{count:2,tracks:[song(1),song(2)]},playlists:{created:[{id:9,name:'手动歌单',trackCount:1}],collected:[],total:1}})
+  if(p==='/api/library')return json({account:null,liked:{count:2,tracks:[song(1),song(2)]},playlists:{created:[{id:9,name:'手动歌单',trackCount:1}],collected:[],total:1}})
   if(p==='/api/playlist/9')return json({tracks:[song(7)],returned:1,trackCount:1,via:'fixture'})
   if(p==='/api/settings')return json({settings:{djEnabled:'false'}})
   if(p==='/api/feedback')return json({active:[]})

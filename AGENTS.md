@@ -1,41 +1,30 @@
-# AGENTS.md
+# AI_Radio 项目约定
 
-## 项目约定
+本文件补充项目特有约束。运行版本和命令以 `.nvmrc`、各包 `package.json` 为准。
 
-个人电台：以歌曲为主体、DJ 偶尔串场。**领域术语以 `CONTEXT.md` 为准**，写代码、命名、写测试都用其中的词，不要自造同义词。
+## 业务不变量
 
-- 结构：`apps/web`（React + Vite + Tailwind）、`apps/api`（NestJS）、`packages/contracts`（共享契约）、`scripts`（开发与核验工具）、`data`（SQLite／登录态／DJ 音频缓存，已 gitignore）。
-- 工具脚本一律 TypeScript：ESM 用 `.mts`、CommonJS 用 `.cts`（`scripts/**`、`apps/web/test/**`），由 `tsconfig.tools.json` 与 `npm run typecheck:tools` 检查（ADR-0006）。
-- 运行时锁 `.nvmrc`（Node v24.16.0），npm workspaces 单 lockfile，不换包管理器。启动与构建命令见 `README.md`。
+- **播放归属**：浏览器持有队列并决定播放，服务端只准备内容。修改播放、补歌或 DJ 异步流程时，验证暂停后迟到结果不出声，停止或切换来源后旧请求不改变当前意图（ADR-0003）。
+- **实际记账**：歌曲首次实际播放才记账，同一 `playInstanceId` 只记一次；手动歌曲和 DJ 不进入自动选歌比例统计（ADR-0005）。
+- **契约一致**：跨端共用的业务结构在 `packages/contracts` 维护一份定义，局部结构留在所属模块。修改外部输入处理时，类型断言不能替代运行时校验。
 
-### 硬边界
+## 代码质量
 
-- **废纸篓规则**：删除缓存、测试临时目录或退役代码，一律移入 `~/.Trash`（退回 `<dir>/.trash`），不自动清空。只有进程自建的空临时目录（`/tmp/radio-codex-*`、`/tmp/radio-dj-*`）可以用 `rmSync`。
-- **队列归属不变**：节目队列与播放决定由浏览器持有，服务端只准备内容；换框架或加推送通道都不构成把它搬到服务端的理由（ADR-0003）。
-- **默认不提交、不推送**，除非明确要求。
-- **测试钩子**只在 `RADIO_TEST_HOOKS=1` 时注册；正常启动不得暴露 `_test` 路由。核验脚本一律用独立端口加 `RADIO_DB_FILE` 指向临时库，不碰真实 `data/radio.db`。
-- **真实链路不能冒充**：真实 Codex／Fish／网易云的验收不能用离线测试或替身结果顶替；没有条件就如实记为待验收。
+- 修改 TypeScript、组件或模块时，遵循 `docs/agents/code-standards.md`。
 
-### 深入文档
+## 验证边界
 
-| 主题 | 位置 |
+- 按行为影响选择检查；文案修改不自动扩大为全套回归。选择测试或运行验证脚本前读 `docs/agents/verification.md`。
+- 独立端口不代表数据隔离：运行 `verify:*` 前核对数据库、登录态和缓存路径；默认使用自建隔离服务与本地供应商替身，具体入口和真实模式要求见验证指南。测试钩子仅在 `RADIO_TEST_HOOKS=1` 时注册。
+- 离线、浏览器替身和真实供应商验证分别报告；未执行的链路明确标注。
+
+## 按需读取
+
+| 任务涉及 | 先读 |
 | --- | --- |
-| 领域词汇 | `CONTEXT.md` |
-| 架构决定 | `docs/adr/`（0003 队列归属、0004 技术栈迁移、0005 探索选歌、0006 工具链 TypeScript） |
-| HTTP 路由合同 | `docs/migration/route-contract.md` |
-| 数据路径与环境变量 | `docs/migration/data-config-paths.md` §2 |
-| 迁移收口状态与未验收项 | `docs/migration/m5-verification.md` |
-
-## Agent skills
-
-### Issue tracker
-
-Issues live as local markdown files under `.scratch/<feature>/` in this repo. **`.scratch/` is gitignored and untracked — it only exists on this machine.** Anything that must be shared belongs in `docs/`, not in `.scratch/`. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-The five canonical triage roles use their default label strings. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+| 领域命名或架构调整 | `CONTEXT.md`、相关 `docs/adr/`；维护约定见 `docs/agents/domain.md` |
+| 选歌、反馈或播放统计 | `docs/adr/0005-discovery-selection-history.md` |
+| 工具或测试入口 | `docs/adr/0006-typescript-tools.md`（`.mts` / `.cts` 与严格类型检查） |
+| HTTP 接口兼容性 | `docs/migration/route-contract.md` 是迁移基线，需同时核对现有控制器与客户端 |
+| 运行配置或验收状态 | `docs/migration/data-config-paths.md`、`docs/migration/m5-verification.md`；历史报告不代替当前验证 |
+| 技能要求建任务或分诊 | `docs/agents/issue-tracker.md`、`docs/agents/triage-labels.md`；`.scratch/` 仅本机使用，共享结论写入 `docs/` |

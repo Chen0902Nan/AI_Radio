@@ -4,15 +4,15 @@ import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
 // 迁移后测试目标：apps/web/src/orchestration 的 TS 实现（原 public/segue-controller.js）
-const c = require('@radio/contracts')
-const { SegueController } = require('../../apps/web/dist-playback/orchestration/segue-controller.cjs')
+const c: typeof import('@radio/contracts') = require('@radio/contracts')
+const { SegueController }: typeof import('../../apps/web/dist-playback/orchestration/segue-controller.js') = require('../../apps/web/dist-playback/orchestration/segue-controller.cjs')
 
 /* ---------- 测试基建：可控时钟 + 可控的替身准备请求 ---------- */
 
 function deferred() {
-  let resolve!: (value: any) => void
+  let resolve!: (value: Record<string, unknown>) => void
   let reject!: (reason?: unknown) => void
-  const promise = new Promise<any>((res, rej) => { resolve = res; reject = rej })
+  const promise = new Promise<Record<string, unknown>>((res, rej) => { resolve = res; reject = rej })
   return { promise, resolve, reject }
 }
 
@@ -21,17 +21,17 @@ const flush = () => new Promise((r) => setImmediate(r))
 
 function makeHarness({ interval = 4, enabled = true } = {}) {
   let clock = 1000000
-  const prepareCalls: any[] = []
+  const prepareCalls: import('../../apps/web/dist-playback/orchestration/segue-controller.js').PrepareRequestPayload[] = []
   const inflight: ReturnType<typeof deferred>[] = [] // 与 prepareCalls 对齐的 deferred
-  const cancels: { segueId: any; reason: any }[] = []
+  const cancels: { segueId: string; reason: string }[] = []
   const controller = new SegueController({
-    requestPrepare: async (req: any) => {
+    requestPrepare: async (req: import('../../apps/web/dist-playback/orchestration/segue-controller.js').PrepareRequestPayload) => {
       prepareCalls.push(req)
       const d = deferred()
       inflight.push(d)
       return d.promise
     },
-    cancelPrepare: (segueId: any, reason: any) => cancels.push({ segueId, reason }),
+    cancelPrepare: (segueId: string, reason: string) => cancels.push({ segueId, reason }),
     now: () => clock,
   })
   controller.startSession({ sessionId: 'sess-t', epoch: 1 })
@@ -80,7 +80,7 @@ function makeHarness({ interval = 4, enabled = true } = {}) {
   return h
 }
 
-const played3 = (h: { controller?: any; tracks?: any[]; prepareCalls?: any[]; inflight?: any[]; cancels?: any[]; now?: () => number; tick?: (ms: any) => void; start: any; end: any; lastDeferred?: () => any; readyWithSample?: () => Promise<any> }) => {
+const played3 = (h: Pick<ReturnType<typeof makeHarness>, 'start' | 'end'>) => {
   for (let i = 0; i < 3; i++) {
     h.start(i, i + 1)
     h.end(i)
@@ -104,8 +104,8 @@ test('默认四首自然结束触发一次；前三首结束不播', async () =>
   await h.readyWithSample()
   const d = h.end(3)
   assert.equal(d.type, 'play-segue')
-  assert.equal(d.segue.script.targetTrackId, h.tracks[4].trackId)
-  assert.ok(d.segue.audio.url.startsWith('/api/dj/audio/'))
+  assert.equal(d.segue!.script.targetTrackId, h.tracks[4].trackId)
+  assert.ok(d.segue!.audio.url.startsWith('/api/dj/audio/'))
 })
 
 test('准备请求携带紧邻下一首的歌名与歌手（生成器要用它们搜索）', () => {
@@ -186,9 +186,9 @@ test('DJ 首次实际出声才重置计数；暂停恢复的后续 playing 不�
   await h.readyWithSample()
   assert.equal(h.end(3).type, 'play-segue')
   const sg = h.controller.snapshot().segueId
-  h.controller.onSeguePlaying({ segueId: sg, at: h.now() })
+  h.controller.onSeguePlaying({ segueId: sg || undefined, at: h.now() })
   assert.equal(h.controller.snapshot().naturalCount, 0)
-  h.controller.onSeguePlaying({ segueId: sg, at: h.now() }) // 暂停恢复后再 playing
+  h.controller.onSeguePlaying({ segueId: sg || undefined, at: h.now() }) // 暂停恢复后再 playing
   assert.equal(h.controller.snapshot().naturalCount, 0)
   // 之后一首结束：count=1，不再触发
   h.start(4, 5)
@@ -203,8 +203,8 @@ test('DJ 已出声被跳过：本轮机会算使用，下一首结束不会立�
   await h.readyWithSample()
   h.end(3)
   const sg = h.controller.snapshot().segueId
-  h.controller.onSeguePlaying({ segueId: sg, at: h.now() })
-  h.controller.onSegueSkipped({ segueId: sg, at: h.now() })
+  h.controller.onSeguePlaying({ segueId: sg || undefined, at: h.now() })
+  h.controller.onSegueSkipped({ segueId: sg || undefined, at: h.now() })
   h.start(4, 5)
   h.end(4)
   assert.equal(h.controller.snapshot().naturalCount, 1)
@@ -218,7 +218,7 @@ test('DJ 未出声就失败/被取消：计数保持到期，下一机会可再�
   await h.readyWithSample()
   h.end(3) // 决定播 DJ
   const sg = h.controller.snapshot().segueId
-  h.controller.onSegueFailed({ segueId: sg, started: false, at: h.now() }) // 加载失败，从未出声
+  h.controller.onSegueFailed({ segueId: sg || undefined, started: false, at: h.now() }) // 加载失败，从未出声
   h.start(4, 5)
   assert.equal(h.controller.snapshot().naturalCount, 4, '计数未被清零')
   assert.equal(h.prepareCalls.length, 2, '立即为新机会再准备')
@@ -241,7 +241,7 @@ test('目标替换（队列改变）：旧机会关闭，为新目标准备；�
   await h.readyWithSample()
   const d = h.end(3)
   assert.equal(d.type, 'play-segue')
-  assert.equal(d.segue.script.targetTrackId, h.tracks[5].trackId)
+  assert.equal(d.segue!.script.targetTrackId, h.tracks[5].trackId)
 })
 
 test('同一首歌重复入队：不同 itemId 各自绑定机会，不串台', async () => {
@@ -265,7 +265,7 @@ test('同一首歌重复入队：不同 itemId 各自绑定机会，不串台', 
   await h.readyWithSample()
   const d = h.end(3)
   assert.equal(d.type, 'play-segue')
-  assert.equal(d.segue.script.targetItemId, dupB.itemId, '播报绑定的是新目标条目')
+  assert.equal(d.segue!.script.targetItemId, dupB.itemId, '播报绑定的是新目标条目')
 })
 
 test('队尾等待补歌：先继续歌曲，补歌结果到达后按新目标准备', () => {
@@ -373,7 +373,7 @@ test('配置/认证错误在配置更新前不重复请求', async () => {
   await flush()
   h.start(4, 5)
   assert.equal(h.prepareCalls.length, 1, '被阻止')
-  h.controller.setConfig({ djVoiceReferenceId: 'voice-new', voiceConfigUpdated: true })
+  h.controller.setConfig({ voiceConfigUpdated: true })
   h.controller.onQueueChanged({ next: h.tracks[5], at: h.now() })
   assert.equal(h.prepareCalls.length, 2, '配置更新后解除阻止')
 })
@@ -426,14 +426,14 @@ test('DJ 结束后返回继续目标歌曲的决定', async () => {
   const job = await h.readyWithSample()
   h.end(3)
   const sg = h.controller.snapshot().segueId
-  const d = h.controller.onSegueEnded({ segueId: sg, at: h.now() })
+  const d = h.controller.onSegueEnded({ segueId: sg || undefined, at: h.now() })
   assert.equal(d.type, 'continue-track')
   assert.equal(d.targetItemId, job.script.targetItemId)
 })
 
 test('无效音色阻塞重试，异步结果通知界面，换音色后当前机会立即恢复', async () => {
   const h = makeHarness()
-  const changes: { (): any; new(): any; blockedReason: unknown }[] = []
+  const changes: ReturnType<typeof h.controller.snapshot>[] = []
   h.controller.onChange = () => changes.push(h.controller.snapshot())
   played3(h)
   h.start(3, 4)
@@ -444,4 +444,19 @@ test('无效音色阻塞重试，异步结果通知界面，换音色后当前�
   h.controller.setConfig({ voiceConfigUpdated: true })
   assert.equal(h.prepareCalls.length, 2)
   assert.equal(h.controller.snapshot().cooldownRemainingMs, 0)
+})
+
+test('机会顺序在同一 epoch 单调增长，重连恢复和重新开始不会回退', () => {
+  const h = makeHarness()
+  h.start(0, 1)
+  const first = h.controller.snapshot().transitionSeq
+  h.end(0); h.start(1, 2)
+  assert.ok(h.controller.snapshot().transitionSeq > first)
+  const latest = h.controller.snapshot().transitionSeq
+  h.controller.startSession({ sessionId: 'sess-t', epoch: 1 })
+  h.start(2, 3)
+  assert.ok(h.controller.snapshot().transitionSeq > latest)
+  h.controller.startSession({ sessionId: 'new', epoch: 20, transitionSeq: 50 })
+  h.start(0, 1)
+  assert.equal(h.controller.snapshot().transitionSeq, 51)
 })

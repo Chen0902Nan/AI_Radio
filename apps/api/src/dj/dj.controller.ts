@@ -21,14 +21,7 @@ export class DjController {
   async prepare(@Res() res: Response, @Body() body: Record<string, unknown>): Promise<void> {
     const r = (await this.djPipeline.prepare(body)) as { ok: boolean; code?: string }
     if (!r.ok) {
-      const status =
-        r.code === 'invalid_request'
-          ? 400
-          : r.code === 'payload_conflict'
-            ? 409
-            : r.code === 'cooldown_active' || r.code!.endsWith('_blocked')
-              ? 429
-              : 502
+      const status = prepareStatus(r.code)
       sendJson(res, status, r)
       return
     }
@@ -99,4 +92,11 @@ export class DjController {
     }
     sendJson(res, 200, r)
   }
+}
+
+function prepareStatus(code: string | undefined): number {
+  if (code === 'invalid_request') return 400
+  if (['payload_conflict', 'session_ended', 'stale_epoch'].includes(code || '')) return 409
+  if (code === 'cooldown_active' || code?.endsWith('_blocked')) return 429
+  return 502
 }

@@ -65,6 +65,7 @@ interface PendingPrepare {
 export interface PrepareRequestPayload {
   sessionId: string | null
   epoch: number
+  transitionSeq: number
   transitionId: string
   fromItemId: string
   targetItemId: string
@@ -83,6 +84,7 @@ export class SegueController {
 
   private sessionId: string | null = null
   private epoch = 0
+  private transitionSeq = 0
   private stopped = true
   private paused = false
   private naturalCount = 0
@@ -118,7 +120,8 @@ export class SegueController {
   /* ---------- 会话与配置 ---------- */
 
   /** 开播/重开：清空全部机会状态，从 0 计数。 */
-  startSession({ sessionId, epoch = 0 }: { sessionId?: string | null; epoch?: number }): Record<string, unknown> {
+  startSession({ sessionId, epoch = 0, transitionSeq = 0 }: { sessionId?: string | null; epoch?: number; transitionSeq?: number }): Record<string, unknown> {
+    this.transitionSeq = sessionId === this.sessionId ? Math.max(this.transitionSeq, transitionSeq) : transitionSeq
     this.sessionId = sessionId || null
     this.epoch = Number(epoch) || 0
     this.stopped = false
@@ -240,34 +243,13 @@ export class SegueController {
 
   /** 自然结束：唯一累计点；到期时一次性决定播 DJ 还是继续歌曲。 */
   onTrackEnded({ item, playInstanceId, natural, at }: { item?: TrackItem | null; playInstanceId?: string | null; natural?: boolean; at?: number } = {}): SegueDecision {
-    if (this.stopped) return this._decide('none', 'stopped', at)
-    if (natural !== true) return this._decide('none', 'not_natural', at)
-    if (playInstanceId && this.currentPlayInstance && playInstanceId !== this.currentPlayInstance) {
-      return this._decide('none', 'stale_instance', at)
-    }
-    if (playInstanceId && this.lastCountedEndedInstance === playInstanceId) {
-      return this._decide('none', 'duplicate_ended', at)
-    }
-    if (item && this.currentItem && item.itemId !== this.currentItem.itemId) {
-      return this._decide('none', 'stale_item', at)
-    }
+    const ignored = this.endedRejection(item, playInstanceId, natural)
+    if (ignored) return this._decide('none', ignored, at)
     this.lastCountedEndedInstance = playInstanceId || null
     this.naturalCount += 1
 
     const due = this.naturalCount >= this.config.djIntervalTracks
-    const playable =
-      this.config.djEnabled &&
-      due &&
-      !this.paused &&
-      this.transition &&
-      isTransitionOpen(this.transition) &&
-      this.pending &&
-      this.pending.state === 'ready' &&
-      this.pending.transitionId === this.transition.transitionId &&
-      this.nextItem &&
-      this.pending.targetItemId === this.nextItem.itemId &&
-      this.nextPlayable !== false
-    if (playable && this.pending!.ready && this.nextItem) {
+    if (this.canPlaySegue(due) && this.pending?.ready && this.nextItem) {
       this.pending!.state = 'playing'
       this.stats.plays += 1
       return this._decide('play-segue', 'ready_and_due', at, {
@@ -285,6 +267,43 @@ export class SegueController {
     return this._decide('continue-track', due ? 'due_but_not_ready' : 'interval_not_due', at, {
       targetItemId: this.nextItem ? this.nextItem.itemId : undefined,
     })
+  }
+
+  private isStalePlayInstance(id: string | null | undefined): boolean {
+    return !!id && !!this.currentPlayInstance && id !== this.currentPlayInstance
+  }
+
+  private endedRejection(item: TrackItem | null | undefined, playInstanceId: string | null | undefined, natural: boolean | undefined): string | null {
+    if (this.stopped) return 'stopped'
+    if (natural !== true) return 'not_natural'
+    if (this.isStalePlayInstance(playInstanceId)) {
+      return 'stale_instance'
+    }
+    if (playInstanceId && this.lastCountedEndedInstance === playInstanceId) {
+      return 'duplicate_ended'
+    }
+    if (item && this.currentItem && item.itemId !== this.currentItem.itemId) {
+      return 'stale_item'
+    }
+    return null
+  }
+
+  private isSegueDue(due: boolean): boolean {
+    return this.config.djEnabled && due && !this.paused
+  }
+
+  private canPlaySegue(due: boolean): boolean {
+    return Boolean(
+      this.isSegueDue(due) &&
+      this.transition &&
+      isTransitionOpen(this.transition) &&
+      this.pending &&
+      this.pending.state === 'ready' &&
+      this.pending.transitionId === this.transition.transitionId &&
+      this.nextItem &&
+      this.pending.targetItemId === this.nextItem.itemId &&
+      this.nextPlayable !== false
+    )
   }
 
   /* ---------- DJ 生命周期 ---------- */
@@ -359,6 +378,7 @@ export class SegueController {
       sessionId: this.sessionId,
       epoch: this.epoch,
       transitionId: this.transition.transitionId,
+      transitionSeq: this.transition.transitionSeq,
       fromItemId: this.transition.fromItemId,
       targetItemId: this.transition.targetItemId,
       targetTrackId: this.transition.targetTrackId!,
@@ -456,6 +476,7 @@ export class SegueController {
     this.transition = makeTransition({
       sessionId: this.sessionId || '',
       epoch: this.epoch,
+      transitionSeq: ++this.transitionSeq,
       fromItemId: this.currentItem.itemId,
       targetItemId: this.nextItem.itemId,
       targetTrackId: this.nextItem.trackId,
@@ -485,7 +506,7 @@ export class SegueController {
   }
 
   /** 供界面与测试读取的状态快照。 */
-  snapshot(): Record<string, unknown> {
+  snapshot() {
     const now = this.now()
     let state = 'idle'
     if (this.stopped) state = 'stopped'
@@ -496,6 +517,7 @@ export class SegueController {
       djIntervalTracks: this.config.djIntervalTracks,
       sessionId: this.sessionId,
       epoch: this.epoch,
+      transitionSeq: this.transitionSeq,
       naturalCount: this.naturalCount,
       countDue: this.naturalCount >= this.config.djIntervalTracks,
       state,

@@ -1,0 +1,465 @@
+{
+  "version": 1,
+  "files": [],
+  "functions": [
+    {
+      "file": "apps/api/src/dj/audio-cache.ts",
+      "occurrence": 0,
+      "symbol": "parseMetadata",
+      "effectiveLines": 10,
+      "complexity": 14,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/dj/audio-cache.ts",
+      "occurrence": 0,
+      "symbol": "createAudioCache",
+      "effectiveLines": 185,
+      "complexity": 5,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/dj/audio-cache.ts",
+      "occurrence": 0,
+      "symbol": "put",
+      "effectiveLines": 55,
+      "complexity": 17,
+      "nesting": 3,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/dj/dj-script.service.ts",
+      "occurrence": 0,
+      "symbol": "summarizeSearchActivity",
+      "effectiveLines": 29,
+      "complexity": 12,
+      "nesting": 3,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/dj/dj-script.service.ts",
+      "occurrence": 0,
+      "symbol": "generateSegueScriptImpl",
+      "effectiveLines": 40,
+      "complexity": 28,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/dj/dj-script.service.ts",
+      "occurrence": 0,
+      "symbol": "finish",
+      "effectiveLines": 53,
+      "complexity": 11,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/dj/dj.controller.ts",
+      "occurrence": 0,
+      "symbol": "preview",
+      "effectiveLines": 17,
+      "complexity": 7,
+      "nesting": 4,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/dj/mp3-duration.ts",
+      "occurrence": 0,
+      "symbol": "mp3Duration",
+      "effectiveLines": 17,
+      "complexity": 11,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/dj/pipeline-jobs.ts",
+      "occurrence": 0,
+      "symbol": "createJobStore",
+      "effectiveLines": 164,
+      "complexity": 1,
+      "nesting": 0,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/dj/pipeline.ts",
+      "occurrence": 0,
+      "symbol": "createDjPipeline",
+      "effectiveLines": 125,
+      "complexity": 11,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/http/static.controller.ts",
+      "occurrence": 0,
+      "symbol": "serve",
+      "effectiveLines": 30,
+      "complexity": 11,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/listening/listening.controller.ts",
+      "occurrence": 0,
+      "symbol": "playStart",
+      "effectiveLines": 21,
+      "complexity": 12,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/music/music.controller.ts",
+      "occurrence": 0,
+      "symbol": "audio",
+      "effectiveLines": 32,
+      "complexity": 13,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/music/netease.service.ts",
+      "occurrence": 0,
+      "symbol": "selectionLibrary",
+      "effectiveLines": 34,
+      "complexity": 14,
+      "nesting": 4,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/music/netease.service.ts",
+      "occurrence": 0,
+      "symbol": "discoveryCandidates",
+      "effectiveLines": 12,
+      "complexity": 7,
+      "nesting": 4,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/music/netease.service.ts",
+      "occurrence": 0,
+      "symbol": "getUserPlaylists",
+      "effectiveLines": 47,
+      "complexity": 12,
+      "nesting": 3,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/music/netease.service.ts",
+      "occurrence": 0,
+      "symbol": "getPlaylistTracks",
+      "effectiveLines": 38,
+      "complexity": 11,
+      "nesting": 3,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/persistence/db.service.ts",
+      "occurrence": 0,
+      "symbol": "onModuleInit",
+      "effectiveLines": 58,
+      "complexity": 7,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/preparation/discovery-selection.ts",
+      "occurrence": 0,
+      "symbol": "pick",
+      "effectiveLines": 39,
+      "complexity": 17,
+      "nesting": 4,
+      "component": false
+    },
+    {
+      "file": "apps/api/src/preparation/orchestrator.service.ts",
+      "occurrence": 0,
+      "symbol": "prepareBatch",
+      "effectiveLines": 41,
+      "complexity": 12,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "apps/web/src/features/player/Player.tsx",
+      "occurrence": 0,
+      "symbol": "Player",
+      "effectiveLines": 73,
+      "complexity": 11,
+      "nesting": 3,
+      "component": true
+    },
+    {
+      "file": "apps/web/src/orchestration/radio-runtime.ts",
+      "occurrence": 0,
+      "symbol": "createPlayback",
+      "effectiveLines": 101,
+      "complexity": 3,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "apps/web/src/orchestration/refill-controller.ts",
+      "occurrence": 0,
+      "symbol": "<anonymous>",
+      "effectiveLines": 26,
+      "complexity": 12,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "apps/web/src/orchestration/refill-controller.ts",
+      "occurrence": 0,
+      "symbol": "check",
+      "effectiveLines": 14,
+      "complexity": 11,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "apps/web/src/orchestration/refill-controller.ts",
+      "occurrence": 0,
+      "symbol": "handleResult",
+      "effectiveLines": 43,
+      "complexity": 17,
+      "nesting": 3,
+      "component": false
+    },
+    {
+      "file": "apps/web/src/orchestration/segue-controller.ts",
+      "occurrence": 0,
+      "symbol": "setConfig",
+      "effectiveLines": 29,
+      "complexity": 11,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "apps/web/src/orchestration/segue-controller.ts",
+      "occurrence": 0,
+      "symbol": "onTrackStarted",
+      "effectiveLines": 14,
+      "complexity": 11,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "apps/web/src/orchestration/segue-controller.ts",
+      "occurrence": 0,
+      "symbol": "onQueueChanged",
+      "effectiveLines": 15,
+      "complexity": 13,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "apps/web/src/orchestration/segue-controller.ts",
+      "occurrence": 0,
+      "symbol": "maybePrepare",
+      "effectiveLines": 51,
+      "complexity": 17,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "apps/web/src/orchestration/segue-controller.ts",
+      "occurrence": 0,
+      "symbol": "_onPrepareResult",
+      "effectiveLines": 33,
+      "complexity": 15,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "apps/web/src/orchestration/segue-controller.ts",
+      "occurrence": 0,
+      "symbol": "snapshot",
+      "effectiveLines": 28,
+      "complexity": 13,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "packages/contracts/src/identity.ts",
+      "occurrence": 0,
+      "symbol": "makeTrackItem",
+      "effectiveLines": 19,
+      "complexity": 15,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "packages/contracts/src/playback-events.ts",
+      "occurrence": 0,
+      "symbol": "validateEvent",
+      "effectiveLines": 26,
+      "complexity": 17,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "packages/contracts/src/queue-validation.ts",
+      "occurrence": 0,
+      "symbol": "validateSegueAudio",
+      "effectiveLines": 12,
+      "complexity": 15,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "packages/contracts/src/queue-validation.ts",
+      "occurrence": 0,
+      "symbol": "validateQueueItem",
+      "effectiveLines": 37,
+      "complexity": 25,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "packages/contracts/src/samples.ts",
+      "occurrence": 0,
+      "symbol": "buildInvalidSamples",
+      "effectiveLines": 73,
+      "complexity": 3,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "packages/contracts/src/script-validation.ts",
+      "occurrence": 0,
+      "symbol": "sources.forEach callback",
+      "effectiveLines": 24,
+      "complexity": 14,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "packages/contracts/src/transition-validation.ts",
+      "occurrence": 0,
+      "symbol": "validateTransition",
+      "effectiveLines": 19,
+      "complexity": 27,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "packages/contracts/src/transition-validation.ts",
+      "occurrence": 0,
+      "symbol": "validatePrepareRequest",
+      "effectiveLines": 41,
+      "complexity": 31,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "packages/contracts/src/transition-validation.ts",
+      "occurrence": 0,
+      "symbol": "jobMatchesPrepare",
+      "effectiveLines": 12,
+      "complexity": 11,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "scripts/browser/discovery.test.mts",
+      "occurrence": 0,
+      "symbol": "test(真实浏览器：首批等待、来源记录、停止不误播、手动歌单后自动接回混合电台)",
+      "effectiveLines": 51,
+      "complexity": 2,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "scripts/browser/discovery.test.mts",
+      "occurrence": 0,
+      "symbol": "http.createServer callback",
+      "effectiveLines": 23,
+      "complexity": 22,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "scripts/browser/migration.test.mts",
+      "occurrence": 0,
+      "symbol": "test(浏览器：连续歌曲→SSE就绪DJ→歌曲、补歌、暂停恢复与新会话)",
+      "effectiveLines": 72,
+      "complexity": 3,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "scripts/browser/migration.test.mts",
+      "occurrence": 0,
+      "symbol": "http.createServer callback",
+      "effectiveLines": 31,
+      "complexity": 28,
+      "nesting": 3,
+      "component": false
+    },
+    {
+      "file": "scripts/lib/dev-runner.mts",
+      "occurrence": 0,
+      "symbol": "runDev",
+      "effectiveLines": 118,
+      "complexity": 8,
+      "nesting": 3,
+      "component": false
+    },
+    {
+      "file": "scripts/lib/library-checks.mts",
+      "occurrence": 0,
+      "symbol": "collectFailures",
+      "effectiveLines": 34,
+      "complexity": 22,
+      "nesting": 3,
+      "component": false
+    },
+    {
+      "file": "scripts/read-library.mts",
+      "occurrence": 0,
+      "symbol": "main",
+      "effectiveLines": 125,
+      "complexity": 18,
+      "nesting": 3,
+      "component": false
+    },
+    {
+      "file": "scripts/tests/dev-command.test.mts",
+      "occurrence": 0,
+      "symbol": "test(dev：冷启动先构建，修改后重启，编译失败保留服务，退出清理子进程)",
+      "effectiveLines": 51,
+      "complexity": 2,
+      "nesting": 1,
+      "component": false
+    },
+    {
+      "file": "scripts/tests/dj-pipeline.test.mts",
+      "occurrence": 0,
+      "symbol": "test callback",
+      "effectiveLines": 25,
+      "complexity": 13,
+      "nesting": 2,
+      "component": false
+    },
+    {
+      "file": "scripts/tests/segue-controller.test.mts",
+      "occurrence": 0,
+      "symbol": "makeHarness",
+      "effectiveLines": 60,
+      "complexity": 1,
+      "nesting": 0,
+      "component": false
+    },
+    {
+      "file": "scripts/tests/support/dj-pipeline-fixture.mts",
+      "occurrence": 0,
+      "symbol": "makeDeps",
+      "effectiveLines": 56,
+      "complexity": 1,
+      "nesting": 0,
+      "component": false
+    }
+  ]
+}

@@ -19,6 +19,29 @@ export const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000
 export const DEFAULT_MAX_BYTES = 100 * 1024 * 1024
 const ASSET_ID_RE = /^[a-f0-9]{64}$/
 
+interface CacheMetadata extends Record<string, unknown> {
+  assetId: string
+  bytes: number
+  durationMs: number
+  createdAt: number
+  contentType: string
+}
+
+function finiteAtLeast(value: unknown, minimum: number): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= minimum
+}
+
+function parseMetadata(value: unknown, assetId: string, actualBytes: number): CacheMetadata | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const meta = value as Record<string, unknown>
+  if (meta.assetId !== assetId || 'hit' in meta || 'corrupt' in meta) return null
+  const { bytes, durationMs, createdAt, contentType } = meta
+  if (!finiteAtLeast(bytes, 1) || !Number.isSafeInteger(bytes) || bytes !== actualBytes) return null
+  if (!finiteAtLeast(durationMs, Number.MIN_VALUE) || !finiteAtLeast(createdAt, 0)) return null
+  if (typeof contentType !== 'string' || !/^audio\/[^\s;]+(?:\s*;.*)?$/i.test(contentType)) return null
+  return { ...meta, assetId, bytes, durationMs, createdAt, contentType }
+}
+
 export function defaultMoveToTrash(src: string, dir: string): { ok: boolean; dest?: string } {
   const candidates = [path.join(os.homedir(), '.Trash'), path.join(dir, '.trash')]
   for (const base of candidates) {
@@ -93,7 +116,7 @@ export function createAudioCache(opts: { dir: string; ttlMs?: number; maxBytes?:
     return [...ids].map((assetId) => {
       const meta = readMeta(assetId)
       if (!meta) return { assetId, corrupt: true, bytes: fileSize(mp3Path(assetId)), createdAt: 0 }
-      return { assetId, corrupt: false, bytes: Number(meta.bytes) || fileSize(mp3Path(assetId)), createdAt: Number(meta.createdAt) || 0 }
+      return { assetId, corrupt: false, bytes: meta.bytes, createdAt: meta.createdAt }
     })
   }
 
@@ -105,11 +128,10 @@ export function createAudioCache(opts: { dir: string; ttlMs?: number; maxBytes?:
     }
   }
 
-  function readMeta(assetId: string): Record<string, unknown> | null {
+  function readMeta(assetId: string): CacheMetadata | null {
     try {
-      const meta = JSON.parse(fs.readFileSync(metaPath(assetId), 'utf-8'))
-      if (!meta || meta.assetId !== assetId) return null
-      return meta
+      const meta: unknown = JSON.parse(fs.readFileSync(metaPath(assetId), 'utf-8'))
+      return parseMetadata(meta, assetId, fileSize(mp3Path(assetId)))
     } catch (_) {
       return null
     }
@@ -190,7 +212,7 @@ export function createAudioCache(opts: { dir: string; ttlMs?: number; maxBytes?:
 
     if (fs.existsSync(mp3Path(assetId))) {
       const meta = readMeta(assetId)
-      if (meta) return { ok: true, assetId, path: mp3Path(assetId), bytes: (meta.bytes as number) || buffer.length, durationMs: meta.durationMs as number, reused: true }
+      if (meta) return { ok: true, assetId, path: mp3Path(assetId), bytes: meta.bytes, durationMs: meta.durationMs, reused: true }
       // meta 损坏：当作新发布覆盖
       await removeEntry(assetId)
     }
@@ -232,7 +254,7 @@ export function createAudioCache(opts: { dir: string; ttlMs?: number; maxBytes?:
     if (!fs.existsSync(mp3Path(assetId))) return { hit: false, corrupt: false }
     const meta = readMeta(assetId)
     if (!meta) return { hit: false, corrupt: true }
-    return { hit: true, corrupt: false, ...meta }
+    return { ...meta, hit: true, corrupt: false }
   }
 
   /** 只为本缓存内的资产解析路径；拒绝路径穿越与外部文件。 */

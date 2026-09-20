@@ -15,7 +15,7 @@ function Header() {
     void (async () => {
       try {
         const data = await api.library()
-        const acc = data.account as { nickname: string; userId: number } | null
+        const acc = data.ok ? data.account : null
         if (data.ok && acc) {
           setAccount(`${acc.nickname} · uid ${acc.userId}`)
           store.set({ status: { text: store.get().status.text, cls: 'ok' } })

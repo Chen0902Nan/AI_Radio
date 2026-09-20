@@ -107,20 +107,25 @@ export class RefillController {
     this.now = opts.now || (() => Date.now())
     this.setTimeoutFn = opts.setTimeout || ((fn, ms) => setTimeout(fn, ms))
     this.clearTimeoutFn = opts.clearTimeout || ((t) => clearTimeout(t as NodeJS.Timeout))
-    this.config = { ...REFILL_DEFAULTS, ...(opts.config || {}) }
+    this.config = { ...REFILL_DEFAULTS }
+    this.setConfig({ ...opts.config })
 
     this.epoch = opts.initialEpoch !== undefined ? Number(opts.initialEpoch) || 0 : Date.now()
   }
 
   setConfig(partial: Record<string, unknown> = {}): RefillConfig {
-    for (const [k, v] of Object.entries(partial)) {
-      if (v === undefined || v === null || v === '' || Number.isNaN(Number(v))) continue
-      ;(this.config as unknown as Record<string, number>)[k] = Number(v)
+    for (const key of Object.keys(REFILL_DEFAULTS) as Array<keyof RefillConfig>) {
+      const value = partial[key]
+      if (typeof value !== 'number' && typeof value !== 'string') continue
+      if (typeof value === 'string' && !value.trim()) continue
+      const number = Number(value)
+      const minimum = key === 'batchSize' || key === 'maxAttempts' ? 1 : 0
+      if (Number.isSafeInteger(number) && number >= minimum) this.config[key] = number
     }
     return { ...this.config }
   }
 
-  snapshot(): Record<string, unknown> {
+  snapshot() {
     return {
       epoch: this.epoch,
       inFlight: this.inFlight,

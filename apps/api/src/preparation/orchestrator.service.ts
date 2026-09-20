@@ -34,7 +34,16 @@ function normalizeIdSet(ids?: unknown[]): Set<number> {
   return set
 }
 
-export type PrepareResult = Record<string, unknown>
+type SelectionResult = Awaited<ReturnType<DiscoverySelection['pick']>>
+type CandidatePool = Awaited<ReturnType<DiscoverySelection['candidates']>>
+type PrepareFailure = { ok: false; code: string; message: string; dropped?: SelectionResult['dropped']; deduped?: boolean }
+type PrepareSuccess = SelectionResult & {
+  ok: true; source: 'codex' | 'library'; degraded: boolean; message: string; reason?: string; deduped?: boolean
+  meta: { durationMs: number; candidates: number; codex: CodexResult['meta'] | { skipped: true }; targetDiscoveryRatio: number }
+}
+export type PrepareResult = PrepareFailure | PrepareSuccess
+type PreparationEntry = { epoch: number; invalidated: boolean }
+function errorMessage(error: unknown): string { return error instanceof Error ? error.message : String(error) }
 
 @Injectable()
 export class OrchestratorService {
@@ -65,7 +74,7 @@ export class OrchestratorService {
         playable = info.kind === 'full'
       } catch (err) {
         kind = 'error'
-        error = (err as Error).message
+        error = errorMessage(err)
       }
       out.push({ ...(item as CodexCandidate), type: 'track', kind, playable, error })
     }
@@ -108,7 +117,7 @@ export class OrchestratorService {
   }
 
   /** 单个在途任务的真实生成流程。调用方已保证同一会话同一意图不会并发进入。 */
-  private async runPrepare(opts: PrepareOptions, entry: { invalidated: boolean }): Promise<PrepareResult> {
+  private async runPrepare(opts: PrepareOptions, entry: { epoch: number; invalidated: boolean }): Promise<PrepareResult> {
     const started = Date.now()
     const {
       library,
@@ -121,21 +130,7 @@ export class OrchestratorService {
     } = opts
     const count_ = Math.max(1, Math.min(20, Math.floor(count || this.db.getNumberSetting('refillBatchSize', 5))))
 
-    const superseded = () => ({
-      ok: false,
-      code: 'superseded',
-      message: '已有更新的编排意图，本次补歌结果作废',
-    })
-    const ended = () => ({
-      ok: false,
-      code: 'session_ended',
-      message: '收听会话已结束，本次补歌结果作废',
-    })
-    const checkAlive = () => {
-      if (entry.invalidated) return superseded()
-      if (!this.isSessionOpen(sessionId)) return ended()
-      return null
-    }
+    const checkAlive = () => this.preparationFailure(sessionId, entry)
 
     const selection = new DiscoverySelection(this.ncm, this.db)
     const identity = this.ncm.currentIdentity()
@@ -145,27 +140,49 @@ export class OrchestratorService {
     if (dead) return dead
     if (!pool.candidates.length) return {ok: false, code: 'candidates_exhausted', message: '没有可用候选，请调整歌单或稍后重试'}
     const inCooldown = Date.now() < this.cooldownState(sessionId).until
-    let cr: CodexResult | null = null
-    if (!skipCodex && !inCooldown) {
-      cr = await this.codex.pickTracks({ candidates: pool.candidates, brief, count: Math.min(pool.candidates.length, count_ * 3), timeoutMs })
-      if (cr.ok) this.cooldowns.delete(sessionId)
-      else this.noteCodexFailure(sessionId)
-    }
+    const cr = await this.rankCandidates(pool, count_, brief, timeoutMs, sessionId, skipCodex || inCooldown)
     dead = checkAlive()
     if (dead) return dead
-    const result = await selection.pick(pool.candidates, cr?.ok ? cr.picks || [] : [], count_, pool.recent, () => !checkAlive() && identity === this.ncm.currentIdentity())
+    const result = await selection.pick(pool.candidates, rankedPicks(cr), count_, pool.recent, () => !checkAlive() && identity === this.ncm.currentIdentity())
     dead = checkAlive()
     if (dead) return dead
     if (identity !== this.ncm.currentIdentity()) return {ok: false, code: 'superseded', message: '账号已切换，请重新准备'}
-    if (!result.picks.length) return {ok: false, code: 'no_playable', message: '候选里没有完整可播歌曲', dropped: result.dropped}
-    if (!cr?.ok) pool.warnings.push('Codex 暂不可用，已按口味候选继续选歌')
-    if (result.discoveryUnavailable) pool.warnings.push('探索候选没有取得完整可播音源，先用歌单内歌曲续播')
-    if (result.repeated) pool.warnings.push('可播候选不足，已放宽最近 50 首防重复限制')
+    return this.finishPreparation(result, pool, cr, inCooldown, started)
+  }
+
+  private preparationFailure(sessionId: string, entry: PreparationEntry): PrepareFailure | null {
+    if (entry.invalidated) return { ok: false, code: 'superseded', message: '已有更新的编排意图，本次补歌结果作废' }
+    if (!this.isSessionOpen(sessionId)) return { ok: false, code: 'session_ended', message: '收听会话已结束，本次补歌结果作废' }
+    if (Number(this.db.getSession(sessionId)?.highest_epoch) > entry.epoch) return { ok: false, code: 'superseded', message: '已有更新的编排意图，本次补歌结果作废' }
+    return null
+  }
+
+  private async rankCandidates(pool: CandidatePool, count: number, brief: string, timeoutMs: number | undefined, sessionId: string, skip: boolean): Promise<CodexResult | null> {
+    if (skip) return null
+    const result = await this.codex.pickTracks({ candidates: pool.candidates, brief, count: Math.min(pool.candidates.length, count * 3), timeoutMs })
+    if (result.ok) this.cooldowns.delete(sessionId)
+    else this.noteCodexFailure(sessionId)
+    return result
+  }
+
+  private finishPreparation(result: SelectionResult, pool: CandidatePool, cr: CodexResult | null, inCooldown: boolean, started: number): PrepareResult {
+    if (!result.picks.length) {
+      const allQueriesFailed = result.dropped.length > 0 && result.dropped.every(item => item.why === '音源查询失败')
+      return { ok: false, code: allQueriesFailed ? 'music_unavailable' : 'no_playable',
+        message: allQueriesFailed ? '音乐服务暂时不可用' : '候选里没有完整可播歌曲', dropped: result.dropped }
+    }
+    this.addWarnings(result, pool, cr)
     const picks = result.picks.filter(p => this.db.activeFeedbackMap().get(p.id) !== 'dislike')
     if (!picks.length) return {ok: false, code: 'candidates_exhausted', message: '候选已被标记为不喜欢，请重新准备'}
     return {ok: true, ...result, picks, source: cr?.ok ? 'codex' : 'library', degraded: pool.warnings.length > 0,
-      message: [...new Set(pool.warnings)].join('；'), reason: cr?.ok ? (pool.warnings.length ? 'discovery_degraded' : undefined) : cr?.code || 'codex_skipped',
+      message: [...new Set(pool.warnings)].join('；'), reason: preparationReason(cr, pool.warnings, inCooldown),
       meta: {durationMs: Date.now() - started, candidates: pool.candidates.length, codex: cr?.meta || {skipped: true}, targetDiscoveryRatio: 0.5}}
+  }
+
+  private addWarnings(result: SelectionResult, pool: CandidatePool, cr: CodexResult | null): void {
+    if (!cr?.ok) pool.warnings.push('Codex 暂不可用，已按口味候选继续选歌')
+    if (result.discoveryUnavailable) pool.warnings.push('探索候选没有取得完整可播音源，先用歌单内歌曲续播')
+    if (result.repeated) pool.warnings.push('可播候选不足，已放宽最近 50 首防重复限制')
   }
 
   /**
@@ -176,21 +193,15 @@ export class OrchestratorService {
    *  - 会话已结束：直接拒绝，不产生结果。
    */
   async prepareBatch(opts: Partial<PrepareOptions> = {}): Promise<PrepareResult> {
-    const sessionId = opts.sessionId as string
+    const sessionId = opts.sessionId
     const epoch = Number(opts.epoch) || 0
 
-    if (!this.isSessionOpen(sessionId)) {
+    if (!sessionId || !this.isSessionOpen(sessionId)) {
       return { ok: false, code: 'session_ended', message: '没有进行中的收听会话，补歌请求已忽略' }
     }
 
-    const latest = this.latestEpoch.get(sessionId)
-    if (latest !== undefined && epoch < latest) {
-      return {
-        ok: false,
-        code: 'superseded',
-        message: `补歌请求已过期（epoch ${epoch} 早于会话最新的 ${latest}）`,
-      }
-    }
+    const rejected = this.acceptPreparation(sessionId, epoch)
+    if (rejected) return rejected
 
     const existing = this.inflight.get(sessionId)
     if (existing) {
@@ -204,13 +215,10 @@ export class OrchestratorService {
     }
 
     this.latestEpoch.set(sessionId, epoch)
-    const entry = { epoch, invalidated: false, startedAt: Date.now(), promise: null as unknown as Promise<PrepareResult> }
-    const promise = this.runPrepare(opts as PrepareOptions, entry).catch((err) => ({
-      ok: false,
-      code: 'internal_error',
-      message: String((err && (err as Error).message) || err),
-    }))
-    entry.promise = promise
+    const state = { epoch, invalidated: false, startedAt: Date.now() }
+    const promise = this.runPrepare({ ...opts, sessionId, epoch, library: opts.library ?? [] }, state)
+      .catch((error): PrepareFailure => ({ ok: false, code: 'internal_error', message: errorMessage(error) }))
+    const entry = Object.assign(state, { promise })
     this.inflight.set(sessionId, entry)
     try {
       const result = await promise
@@ -220,9 +228,9 @@ export class OrchestratorService {
         sessionId,
         epoch,
         state: result.ok ? 'done' : 'failed',
-        code: (result.code as string) ?? undefined,
-        message: (result.message as string) ?? undefined,
-        degraded: Boolean((result as { degraded?: boolean }).degraded),
+        code: result.ok ? undefined : result.code,
+        message: result.message,
+        degraded: result.ok && result.degraded,
       })
       return result
     } finally {
@@ -230,6 +238,22 @@ export class OrchestratorService {
         this.inflight.delete(sessionId)
       }
     }
+  }
+
+  private acceptPreparation(sessionId: string, epoch: number): PrepareFailure | null {
+    if (!this.db.acceptEpoch(sessionId, epoch)) {
+      return { ok: false, code: 'superseded', message: '补歌请求早于会话持久保存的最新版本' }
+    }
+    const latest = this.latestEpoch.get(sessionId)
+    if (latest !== undefined && epoch < latest) {
+      return {
+        ok: false,
+        code: 'superseded',
+        message: `补歌请求已过期（epoch ${epoch} 早于会话最新的 ${latest}）`,
+      }
+    }
+
+    return null
   }
 
   inflightInfo(): Array<{ sessionId: string; epoch: number; startedAt: number }> {
@@ -253,4 +277,12 @@ export interface PrepareOptions {
   timeoutMs?: number
   skipCodex?: boolean
   rand?: () => number
+}
+
+function rankedPicks(result: CodexResult | null) {
+  return result?.ok ? result.picks ?? [] : []
+}
+function preparationReason(result: CodexResult | null, warnings: string[], cooldown: boolean): string | undefined {
+  if (result?.ok) return warnings.length ? 'discovery_degraded' : undefined
+  return result?.code || (cooldown ? 'codex_cooldown' : 'codex_skipped')
 }

@@ -23,8 +23,10 @@
 | `PORT` | 8787 | index.js | 监听端口 |
 | `HOST` | 127.0.0.1 | index.js | 默认回环监听，单机单入口 |
 | `RADIO_TEST_HOOKS` | 未设置 | index.js / codex.js / netease.js / fish.js / dj-script.js / dj-pipeline.js | `=1` 注册测试钩子并启用注入分支；正常启动不得注册 |
-| `RADIO_DB_FILE` | `data/radio.db` | db.js | SQLite 覆盖路径（验证脚本用它隔离数据库） |
-| `DJ_AUDIO_CACHE_DIR` | `data/dj-audio` | dj-pipeline.js → dj-audio-cache.js | 音频缓存覆盖路径 |
+| `RADIO_DATA_DIR` | 根目录 `data/` | `config/app-config.ts` | 数据目录默认值，包含上游临时镜像；单项覆盖优先 |
+| `RADIO_DB_FILE` | `<DATA_DIR>/radio.db` | `config/app-config.ts` | SQLite 覆盖路径 |
+| `RADIO_SESSION_FILE` | `<DATA_DIR>/session.json` | `config/app-config.ts` | 网易云登录态覆盖路径 |
+| `DJ_AUDIO_CACHE_DIR` | `<DATA_DIR>/dj-audio` | dj-pipeline.js → dj-audio-cache.js | 音频缓存覆盖路径 |
 | `DJ_SCRIPT_TIMEOUT_MS` | 90000 | dj-script.js / dj-pipeline.js | 文案阶段超时 |
 | `FISH_TTS_TIMEOUT_MS` | 60000 | fish.js / dj-pipeline.js | 合成阶段超时 |
 | `FISH_API_KEY` / `FISH_AUDIO_API_KEY` | 无 | index.js → dj-pipeline | Fish 密钥，仅服务进程内存，不入库不下发 |
@@ -46,4 +48,4 @@
 | `npm run typecheck` | contracts / web / api / `tsconfig.tools.json`（scripts 与 apps/web/test）四份严格检查 |
 | `npm run verify:*` / `npm run test:browser` | 真实服务与 Puppeteer 回归（需要 Chrome、登录态或独立实例） |
 
-旧入口已随 M5 清理退役，没有回滚通道；任何时刻只应有一个进程对真实库执行启动收尾（`closeStaleSessions`）。核验脚本一律用独立端口与 `RADIO_DB_FILE` 指向临时库。
+旧入口已随 M5 清理退役，没有回滚通道；任何时刻只应有一个进程对真实库执行启动收尾（`closeStaleSessions`）。核验脚本使用独立端口并完整隔离数据目录、数据库、登录态及缓存；当前默认替身模式和真实模式要求见 [验证与隔离约定](../agents/verification.md)。

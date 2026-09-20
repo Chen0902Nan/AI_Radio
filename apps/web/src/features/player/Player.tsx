@@ -30,7 +30,7 @@ export function Player() {
 
 
   return (
-    <section data-radio-observation={JSON.stringify({ queueLength: snap.queueLength, index: snap.index, sessionId: app.sessionId, awaitingRefill: app.awaitingRefill, userWantsPlayback: snap.userWantsPlayback, refill: refill.snapshot(), segue: segue.snapshot() })} className="rounded-[14px] border border-line bg-panel p-5 mb-[22px]">
+    <section data-radio-observation={JSON.stringify({ ...snap, playId: app.playId, status: app.status.text, prepStatus: app.prepStatus.text, queue: playback.queue, consecutiveFailures: playback.consecutiveFailures, queueLength: snap.queueLength, index: snap.index, sessionId: app.sessionId, awaitingRefill: app.awaitingRefill, userWantsPlayback: snap.userWantsPlayback, refill: refill.snapshot(), segue: segue.snapshot() })} className="rounded-[14px] border border-line bg-panel p-5 mb-[22px]">
       {/* 当前播放 */}
       <div className="flex items-center gap-3.5 mb-4">
         <div className="grid h-14 w-14 flex-none place-items-center rounded-[10px] bg-panel-2 text-2xl text-dim">♪</div>

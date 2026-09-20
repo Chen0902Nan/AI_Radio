@@ -44,14 +44,25 @@ function parseFrameHeader(buf: Buffer, o: number): FrameHeader | null {
   return { version, bitrate, sampleRate, samplesPerFrame, mode, frameBytes }
 }
 
+function xingDuration(buf: Buffer, offset: number, header: FrameHeader): number | null {
+  const side = header.version === 3 ? (header.mode === 3 ? 17 : 32) : header.mode === 3 ? 9 : 17
+  const xing = offset + 4 + side
+  if (xing + 12 > buf.length) return null
+  const tag = buf.toString('latin1', xing, xing + 4)
+  if (tag !== 'Xing' && tag !== 'Info') return null
+  if (!(buf.readUInt32BE(xing + 4) & 0x01)) return null
+  const frames = buf.readUInt32BE(xing + 8)
+  return frames > 0 ? (frames * header.samplesPerFrame) / header.sampleRate : null
+}
+function audioOffset(buf: Buffer): number {
+  if (buf[0] !== 0x49 || buf[1] !== 0x44 || buf[2] !== 0x33 || buf.length <= 10) return 0
+  const size = ((buf[6]! & 0x7f) << 21) | ((buf[7]! & 0x7f) << 14) | ((buf[8]! & 0x7f) << 7) | (buf[9]! & 0x7f)
+  return 10 + size
+}
+
 export function mp3Duration(buf: Buffer): number | null {
   if (!Buffer.isBuffer(buf) || buf.length < 4) return null
-  let o = 0
-  // ID3v2（syncsafe size）
-  if (buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33 && buf.length > 10) {
-    const size = ((buf[6]! & 0x7f) << 21) | ((buf[7]! & 0x7f) << 14) | ((buf[8]! & 0x7f) << 7) | (buf[9]! & 0x7f)
-    o = 10 + size
-  }
+  let o = audioOffset(buf)
   for (;;) {
     while (o < buf.length - 1 && !(buf[o] === 0xff && (buf[o + 1]! & 0xe0) === 0xe0)) o += 1
     if (o > buf.length - 4) return null
@@ -60,19 +71,8 @@ export function mp3Duration(buf: Buffer): number | null {
       o += 1
       continue
     }
-    // Xing/Info 头：位于首帧头 + 侧信息之后（MPEG1: mono 17 / 立体声 32；MPEG2: 9/17）
-    const side = h.version === 3 ? (h.mode === 3 ? 17 : 32) : h.mode === 3 ? 9 : 17
-    const xing = o + 4 + side
-    if (xing + 12 <= buf.length) {
-      const tag = buf.toString('latin1', xing, xing + 4)
-      if (tag === 'Xing' || tag === 'Info') {
-        const flags = buf.readUInt32BE(xing + 4)
-        if (flags & 0x01) {
-          const frames = buf.readUInt32BE(xing + 8)
-          if (frames > 0) return (frames * h.samplesPerFrame) / h.sampleRate
-        }
-      }
-    }
+    const duration = xingDuration(buf, o, h)
+    if (duration !== null) return duration
     if (h.bitrate > 0) return ((buf.length - o) * 8) / h.bitrate
     return null
   }

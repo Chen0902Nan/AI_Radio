@@ -1,6 +1,6 @@
 import type { ProbeReport } from './lib/tool-types.d.ts'
 import type { LibraryReport } from './lib/library-checks.mts'
-type LibraryProbeReport = ProbeReport & LibraryReport & { steps: NonNullable<LibraryReport["steps"]> }
+type LibraryProbeReport = ProbeReport & LibraryReport & { steps: NonNullable<LibraryReport["steps"]>; failures: string[]; playlists?: Record<string, unknown> }
 /**
  * 读取真实账号音乐资料（只读），检查分页、去重与错误处理，并输出不含凭据的报告。
  * 用法：node scripts/read-library.mts
@@ -14,17 +14,17 @@ import { collectFailures } from './lib/library-checks.mts'
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // 迁移后使用 Nest 编译产物的 NeteaseService（原 server/netease.js）
-const { NeteaseService } = require('../apps/api/dist/music/netease.service.js')
+const { NeteaseService }: typeof import('../apps/api/dist/music/netease.service.js') = require('../apps/api/dist/music/netease.service.js')
 const ncm = new NeteaseService()
 const OUT_DIR = process.env.RADIO_REPORT_OUT
   ? path.resolve(process.env.RADIO_REPORT_OUT)
   : path.resolve(__dirname, '..', '.scratch/radio-agent/verification/artifacts')
 fs.mkdirSync(OUT_DIR, { recursive: true })
 
-const redact = (s: any) => String(s).replace(/MUSIC_U=[^;]+/g, 'MUSIC_U=***')
+const redact = (s: unknown) => String(s).replace(/MUSIC_U=[^;]+/g, 'MUSIC_U=***')
 
-function sample(list: any[], n = 5) {
-  return list.slice(0, n).map((t: { id: any; name: any; artists: any; album: any; durationMs: any; fee: any }) => ({
+function sample(list: import('../apps/api/dist/music/netease.service.js').Track[], n = 5) {
+  return list.slice(0, n).map((t) => ({
     id: t.id,
     name: t.name,
     artists: t.artists,
@@ -35,9 +35,7 @@ function sample(list: any[], n = 5) {
 }
 
 async function main() {
-  const report: LibraryProbeReport = { at: new Date().toISOString(), steps: [] }
-  await ncm.init()
-
+  const report: LibraryProbeReport = { at: new Date().toISOString(), steps: [], failures: [] }
   const session = ncm.loadSession()
   if (!session) {
     report.blocked = '未登录：data/session.json 不存在，请先扫码登录'
@@ -49,8 +47,11 @@ async function main() {
     return
   }
 
+  await ncm.init()
+
   const account = session.profile || {}
-  const uid = account.userId
+  const uid = Number(account.userId)
+  if (!Number.isSafeInteger(uid) || uid <= 0) throw new Error('登录态缺少有效用户ID')
   report.account = { userId: uid, nickname: account.nickname }
   report.steps.push({ step: 'session', ok: true, uid, nickname: account.nickname })
 
@@ -58,14 +59,14 @@ async function main() {
   const likedIds = await ncm.getLikedIds(session.cookie)
   const likedUnique = new Set(likedIds)
   const likedTracks = await ncm.getLikedTracks(session.cookie, likedIds)
-  const likedTrackIds = likedTracks.map((t: { id: any }) => t.id)
+  const likedTrackIds = likedTracks.map((t) => t.id)
   report.liked = {
     idsReturned: likedIds.length,
     idsUnique: likedUnique.size,
     duplicatesInIds: likedIds.length - likedUnique.size,
     tracksReturned: likedTracks.length,
     missingDetails: likedIds.length - likedTracks.length,
-    totalDurationMs: likedTracks.reduce((a: any, t: { durationMs: any }) => a + (t.durationMs || 0), 0),
+    totalDurationMs: likedTracks.reduce((a, t) => a + (t.durationMs || 0), 0),
     samples: sample(likedTracks, 5),
   }
   report.steps.push({ step: 'liked', ok: true, count: likedTracks.length })
@@ -116,7 +117,7 @@ async function main() {
   for (const pl of targets) {
     try {
       const r = await ncm.getPlaylistTracks(session.cookie, pl.id)
-      const ids = r.tracks.map((t: { id: any }) => t.id)
+      const ids = r.tracks.map((t) => t.id)
       report.playlistTracks.push({
         id: pl.id,
         name: pl.name,

@@ -17,64 +17,17 @@ import {
   type PlayInstanceTracker,
 } from '@radio/contracts'
 
-export interface PlaybackSnapshot {
-  /** 当前条目（歌曲或播报的统一入口身份） */
-  currentItemId: string | null
-  currentTrackId: number | null
-  currentTitle: string | null
-  /** 'track' | 'segue' | 'preview'：试听与正式节目共享音频出口但身份独立 */
-  currentKind: 'track' | 'segue' | 'preview'
-  index: number
-  queueLength: number
-  loadedTrackId: number | null
-  /** 用户当前是否希望出声：加载中暂停后，晚到结果不得把播放拉起来 */
-  userWantsPlayback: boolean
-  resolving: boolean
-  paused: boolean
-  currentTime: number
-  duration: number
-  readyState: number
-  playToken: number
-  previewing: boolean
-  /** 当前媒体归属的播放实例（供调试与测试快照） */
-  mediaPlayInstance: string | null
-}
-
-export interface PlaybackEvents {
-  /** 首次实际出声（同一 playInstanceId 只触发一次）：记录播放记录等 */
-  onFirstPlaying?: (item: TrackItem | null, playInstanceId: string) => void
-  /** 进入歌曲（含手动选曲/切歌）：串场控制器 onTrackStarted 的通知点 */
-  onTrackStarted?: (item: TrackItem, next: TrackItem | null, playInstanceId: string) => void
-  /** 手动下一首（不累计）：串场控制器 onSkipped 的通知点 */
-  onTrackSkipped?: () => void
-  /** 暂停/恢复：串场控制器 onPaused/onResumed 的通知点 */
-  onPaused?: () => void
-  onResumed?: (userGesture?: boolean) => void
-  /** 停止收听：串场控制器 onStopped 的通知点 */
-  onStopped?: () => void
-  /** 当前歌曲的有效自然结束（已按实例去重） */
-  onNaturalEnded?: (item: TrackItem | null, playInstanceId: string) => void
-  /** 播放失败（解析失败/媒体错误/浏览器拒绝），带连续失败计数前的语义 */
-  onTrackFailed?: (item: TrackItem | null, reason: string) => void
-  /** 任意状态变化（供 React 订阅） */
-  onChange?: () => void
-}
-
-export interface ResolveResult {
-  ok: boolean
-  playable?: boolean
-  audioUrl?: string | null
-  code?: string
-  message?: string
-  status?: number
-}
-
-export type AudioFactory = () => HTMLAudioElement
+import type { AudioPort, PlaybackSnapshot, PlaybackEvents, ResolveResult } from './playback-types'
+export type { AudioPort, AudioFactory, PlaybackSnapshot, PlaybackEvents, ResolveResult } from './playback-types'
+import { PlaybackObservation, snapshotOf, loadedTrackId } from './playback-snapshot'
+import { PlaybackRetry } from './playback-retry'
+import { resolveSource } from './track-source'
 
 export class PlaybackController {
-  private audio: HTMLAudioElement
+  private audio: AudioPort
   private tracker: PlayInstanceTracker
-  private listeners = new Set<() => void>()
+  private readonly observation = new PlaybackObservation(() => this.captureSnapshot())
+  private readonly retry = new PlaybackRetry()
 
   private _playToken = 0
   private _userWantsPlayback = false
@@ -88,20 +41,17 @@ export class PlaybackController {
   private _refreshedCurrent = false
   private _sessionStopped = false
   private _atEnd = false
-  private _failTimer: ReturnType<typeof setTimeout> | null = null
 
   // 注入：解析音源与换歌节奏由外部决定（队列策略属于 orchestration 层）
   resolveTrack: (id: number, force?: boolean) => Promise<ResolveResult> = async () => ({ ok: false, code: 'not_configured' })
   /** 单曲失败后的换歌节奏（旧实现：1.2s 后自动下一首）；返回是否真的发起 */
   retryAfterFailure: (failedIndex: number) => void = (failedIndex) => {
-    if (this._failTimer) clearTimeout(this._failTimer)
     const token = this._playToken
-    this._failTimer = setTimeout(() => {
-      this._failTimer = null
+    this.retry.schedule(() => {
       if (token !== this._playToken || !this._userWantsPlayback) return
       if (failedIndex + 1 < this._queue.length) void this.play(failedIndex + 1)
       else this.events.onQueueExhausted?.()
-    }, 1200)
+    })
   }
   /** 连续失败上限（旧实现 3 首） */
   maxConsecutiveFailures = 3
@@ -109,7 +59,7 @@ export class PlaybackController {
 
   events: PlaybackEvents
 
-  constructor(opts: { audio?: HTMLAudioElement; events?: PlaybackEvents } = {}) {
+  constructor(opts: { audio?: AudioPort; events?: PlaybackEvents } = {}) {
     this.audio = opts.audio ?? new Audio()
     this.audio.preload = 'none'
     this.tracker = createPlayInstanceTracker()
@@ -119,75 +69,33 @@ export class PlaybackController {
 
   /* ---------- 订阅（React useSyncExternalStore） ---------- */
 
-  subscribe = (listener: () => void): (() => void) => {
-    this.listeners.add(listener)
-    return () => this.listeners.delete(listener)
-  }
+  subscribe = this.observation.subscribe
+  getSnapshot = this.observation.getSnapshot
 
   private notify(): void {
-    this.sampleSnapshot()
+    this.observation.sample()
     this.events.onChange?.()
-    for (const l of this.listeners) l()
+    this.observation.publish()
   }
 
-  private _lastSnapshot: PlaybackSnapshot | null = null
-
-  /**
-   * 采样仅在 notify 时发生：getSnapshot 只返回缓存引用。
-   * useSyncExternalStore 合同要求同一渲染期间多次调用返回同一引用——
-   * 若在这里直读 audio.currentTime 等实时值，同一渲染内两次读取可能不同，
-   * 造成「值变→新引用」而触发无限重渲染判定。
-   */
-  getSnapshot = (): PlaybackSnapshot => {
-    if (this._lastSnapshot) return this._lastSnapshot
-    return this.sampleSnapshot()
-  }
-
-  private sampleSnapshot(): PlaybackSnapshot {
-    const next: PlaybackSnapshot = {
+  /** 仅 notify 时采样媒体；React 读取缓存，避免同一渲染期间引用变化。 */
+  private captureSnapshot(): PlaybackSnapshot {
+    return snapshotOf(this.audio, {
       currentItemId: this._current?.itemId ?? null,
       currentTrackId: this._current?.trackId ?? null,
       currentTitle: this._current?.name ?? null,
       currentKind: this._currentKind,
       index: this._index,
       queueLength: this._queue.length,
-      loadedTrackId: this.loadedTrackId(),
       userWantsPlayback: this._userWantsPlayback,
       resolving: this._resolving,
-      paused: this.audio.paused,
-      currentTime: this.audio.currentTime,
-      duration: this.audio.duration,
-      readyState: this.audio.readyState,
       playToken: this._playToken,
       previewing: this._previewing,
       mediaPlayInstance: this._mediaPlayInstance,
-    }
-    const last = this._lastSnapshot
-    if (
-      last &&
-      last.currentItemId === next.currentItemId &&
-      last.currentTrackId === next.currentTrackId &&
-      last.currentKind === next.currentKind &&
-      last.index === next.index &&
-      last.queueLength === next.queueLength &&
-      last.loadedTrackId === next.loadedTrackId &&
-      last.userWantsPlayback === next.userWantsPlayback &&
-      last.resolving === next.resolving &&
-      last.paused === next.paused &&
-      last.currentTime === next.currentTime &&
-      last.duration === next.duration &&
-      last.readyState === next.readyState &&
-      last.playToken === next.playToken &&
-      last.previewing === next.previewing &&
-      last.mediaPlayInstance === next.mediaPlayInstance
-    ) {
-      return last
-    }
-    this._lastSnapshot = next
-    return next
+    })
   }
 
-  get queue(): readonly TrackItem[] {
+  get queue(): readonly Readonly<TrackItem>[] {
     return this._queue
   }
 
@@ -220,10 +128,7 @@ export class PlaybackController {
 
   /** 媒体里实际装着哪首歌（切歌解析期间可能还是上一首）。 */
   private loadedTrackId(): number | null {
-    const src = this.audio.currentSrc || this.audio.src || ''
-    if (src.includes('/api/dj/audio/')) return null // DJ 音频不是歌曲
-    const m = src.match(/\/api\/audio\/(\d+)/)
-    return m ? Number(m[1]) : null
+    return loadedTrackId(this.audio)
   }
 
   private handlePlaying = (): void => {
@@ -355,6 +260,14 @@ export class PlaybackController {
   /* ---------- 播放命令 ---------- */
 
   /** 播放指定条目；userGesture 标记用户主动动作（解锁自动出声、重置失败计数）。 */
+  /** 手动点歌的记账属性由队列所有者修改，视图不能直接改条目。 */
+  async playManual(index: number): Promise<void> {
+    const item = this._queue[index]
+    if (!item) return
+    this._queue[index] = { ...item, auto: false, selectionId: undefined }
+    await this.play(index, { userGesture: true })
+  }
+
   async play(index: number, { userGesture = false } = {}): Promise<void> {
     if (index < 0 || index >= this._queue.length) {
       this._userWantsPlayback = false
@@ -374,6 +287,11 @@ export class PlaybackController {
       return this.play(index + 1, { userGesture: true })
     }
 
+    const { token, playInstance } = this.beginTrack(track, index, userGesture)
+    await this.resolveAndPlay(track, token, playInstance)
+  }
+
+  private beginTrack(track: TrackItem, index: number, userGesture: boolean): { token: number; playInstance: string } {
     // 接下来媒体要装歌曲内容：退出试听态，否则这首歌会被当成试听
     // （不记历史、结束不接下一首）
     this._previewing = false
@@ -389,21 +307,17 @@ export class PlaybackController {
     this.notify()
 
     // 进入歌曲：登记播放实例（暂停恢复复用、重开新建由 tracker 保证）
-    const pi = this.tracker.begin(track.itemId)
+    const playInstance = this.tracker.begin(track.itemId)
     this.notify()
-    this.events.onTrackStarted?.(track, this._queue[index + 1] ?? null, pi)
+    this.events.onTrackStarted?.(track, this._queue[index + 1] ?? null, playInstance)
     // 用户点歌/点下一首同样是「恢复收听」：控制器必须解除暂停
     this.events.onResumed?.(userGesture)
 
-    let r: ResolveResult
-    try {
-      r = await this.resolveTrack(track.trackId)
-    } catch (err) {
-      if (token !== this._playToken) return
-      this._resolving = false
-      this.failTrack(track, '解析请求失败：' + (err as Error).message)
-      return
-    }
+    return { token, playInstance }
+  }
+
+  private async resolveAndPlay(track: TrackItem, token: number, playInstance: string): Promise<void> {
+    const source = await resolveSource(() => this.resolveTrack(track.trackId))
 
     // 解析期间用户又切了歌或点了暂停：丢弃过期结果，不碰播放器
     if (token !== this._playToken || !this._userWantsPlayback) {
@@ -413,20 +327,14 @@ export class PlaybackController {
     }
     this._resolving = false
 
-    if (!r.ok || !r.playable) {
-      const reason =
-        r.code === 'trial_only'
-          ? '仅试听片段权限，按规格跳过'
-          : r.code === 'unplayable'
-            ? '账号当前无播放权限'
-            : r.message || `音源不可用 (HTTP ${r.status})`
-      this.failTrack(track, reason)
+    if (!source.ok) {
+      this.failTrack(track, source.reason)
       return
     }
 
-    this.audio.src = r.audioUrl! + '?t=' + Date.now()
+    this.audio.src = source.audioUrl + '?t=' + Date.now()
     // 媒体里装的就是这次播放实例的音频，后续事件按这个实例归属
-    this._mediaPlayInstance = pi
+    this._mediaPlayInstance = playInstance
     try {
       await this.audio.play()
       // 旧 play() 完成不能再操作唯一音频出口；新意图已负责暂停或换曲。
@@ -454,22 +362,7 @@ export class PlaybackController {
    * 否则（切歌加载中暂停过）重新走 play() 完整流程。
    */
   async resume(): Promise<void> {
-    if (this._currentKind === 'segue' && this.segue && !this._sessionStopped) {
-      const token = ++this._playToken
-      this._userWantsPlayback = true
-      this.notify()
-      this.events.onResumed?.(true)
-      try { await this.audio.play() }
-      catch (_) {
-        if (token !== this._playToken || !this.segue) return
-        const failed = this.segue
-        this.segue = null
-        this._currentKind = 'track'
-        this.events.onSegueFailed?.(failed.segueId, this._segueStarted)
-        this.notify()
-      }
-      return
-    }
+    if (this._currentKind === 'segue' && this.segue && !this._sessionStopped) return this.resumeSegue()
     if (this._atEnd) {
       if (this.itemAt(this._index + 1)) return this.play(this._index + 1, { userGesture: true })
       this._userWantsPlayback = true
@@ -478,27 +371,53 @@ export class PlaybackController {
       this.notify()
       return
     }
-    const loaded = this.loadedTrackId()
-    const currentTrackId = this._current?.trackId ?? null
-    if (loaded && loaded === currentTrackId && this.audio.currentTime > 0 && this._currentKind === 'track') {
-      this._playToken += 1
-      this._userWantsPlayback = true
-      const newSession = this._sessionStopped
-      const pi = newSession ? this.tracker.begin(this._current!.itemId) : this._mediaPlayInstance ?? this.tracker.begin(this._current!.itemId)
-      if (newSession || !this._mediaPlayInstance) this._mediaPlayInstance = pi
-      else this.tracker.resume(this._current!.itemId)
-      this._sessionStopped = false
-      if (newSession) this.events.onTrackStarted?.(this._current!, this.itemAt(this._index + 1), pi)
-      this.notify()
-      this.events.onResumed?.(true)
-      try {
-        await this.audio.play()
-      } catch (err) {
-        this.events.onTrackFailed?.(this._current, '浏览器拒绝播放：' + (err as Error).message)
-      }
-      return
-    }
+    const track = this._current
+    if (track && this.canResumeTrack(track)) return this.resumeTrack(track)
     await this.play(Math.max(this._index, 0), { userGesture: true })
+  }
+
+  private canResumeTrack(track: TrackItem): boolean {
+    return this.loadedTrackId() === track.trackId && this.audio.currentTime > 0 && this._currentKind === 'track'
+  }
+
+  private async resumeSegue(): Promise<void> {
+    const token = ++this._playToken
+    this._userWantsPlayback = true
+    this.notify()
+    this.events.onResumed?.(true)
+    try { await this.audio.play() }
+    catch {
+      if (token !== this._playToken || !this.segue) return
+      const failed = this.segue
+      this.segue = null
+      this._currentKind = 'track'
+      this.events.onSegueFailed?.(failed.segueId, this._segueStarted)
+      this.notify()
+    }
+  }
+
+  private ownsTrackOperation(token: number, track: TrackItem): boolean {
+    return token === this._playToken && this._current === track
+  }
+
+  private async resumeTrack(track: TrackItem): Promise<void> {
+    const token = ++this._playToken
+    this._userWantsPlayback = true
+    const newSession = this._sessionStopped
+    const pi = newSession ? this.tracker.begin(track.itemId) : this._mediaPlayInstance ?? this.tracker.begin(track.itemId)
+    if (newSession || !this._mediaPlayInstance) this._mediaPlayInstance = pi
+    else this.tracker.resume(track.itemId)
+    this._sessionStopped = false
+    if (newSession) this.events.onTrackStarted?.(track, this.itemAt(this._index + 1), pi)
+    this.notify()
+    this.events.onResumed?.(true)
+    try {
+      await this.audio.play()
+      if (!this.ownsTrackOperation(token, track)) return
+    } catch (error) {
+      if (!this.ownsTrackOperation(token, track)) return
+      this.events.onTrackFailed?.(track, '浏览器拒绝播放：' + (error as Error).message)
+    }
   }
 
   /** 停止收听：暂停媒体、作废播放意图，并通知串场控制器清空机会与计数。 */
@@ -635,7 +554,12 @@ export class PlaybackController {
 
   /** 开播/停止/再次试听会作废在途试听。 */
   cancelPreview(): void {
+    if (!this._previewing) return
+    this._playToken += 1
     this._previewing = false
+    this.audio.pause()
+    this.audio.removeAttribute('src')
+    this.notify()
   }
 
   /* ---------- 生命周期 ---------- */
@@ -647,22 +571,9 @@ export class PlaybackController {
     this.audio.removeEventListener('error', this.handleError)
     this.audio.removeEventListener('timeupdate', this.handleTimeUpdate)
     this.audio.removeEventListener('pause', this.handlePause)
-    if (this._failTimer) clearTimeout(this._failTimer)
     if (!this.audio.paused) this.audio.pause()
     this.audio.removeAttribute('src')
-    this.listeners.clear()
+    this.retry.cancel()
+    this.observation.clear()
   }
-}
-
-/* PlaybackEvents 里用到但声明在外的补充事件（避免声明块过长拆开阅读） */
-export interface PlaybackEvents {
-  onUpcomingReplaced?: () => void
-  onQueueReplaced?: () => void
-  onQueueExhausted?: () => void
-  onSeguePlaying?: (segue: { segueId: string }) => void
-  onSegueEnded?: (segueId: string) => void
-  onSegueFailed?: (segueId: string, started: boolean) => void
-  onRefreshAttempt?: (message: string) => void
-  onTrackRetrying?: (track: TrackItem, reason: string, attempt: number) => void
-  onPreviewFailed?: (message: string) => void
 }

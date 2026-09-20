@@ -18,7 +18,8 @@
         "../../packages/contracts/dist/cjs"
       ]
     },
-    "rootDir": "src"
+    "rootDir": "src",
+    "declaration": true
   },
   "include": [
     "src/playback/**/*.ts",

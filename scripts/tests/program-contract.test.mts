@@ -4,17 +4,17 @@ import { createRequire } from 'node:module'
 
 // 迁移后测试目标：packages/contracts 的 TS 实现（原 public/program-contract.js）
 const require = createRequire(import.meta.url)
-const c = require('@radio/contracts')
+const c: typeof import('@radio/contracts') = require('@radio/contracts')
 
 /* ---------- 工具 ---------- */
 
 function errors(res: { errors?: Array<{ code: string }>; ok?: unknown; value?: unknown }) {
-  return (res.errors || []).map((e: { code: any }) => e.code)
+  return (res.errors || []).map((e: { code: string }) => e.code)
 }
-function hasCode(res: any, code: any) {
+function hasCode(res: Parameters<typeof errors>[0], code: string) {
   return errors(res).includes(code)
 }
-function assertRejected(res: { ok: unknown; value: any }, code: string) {
+function assertRejected(res: { ok: unknown; value?: unknown }, code: string) {
   assert.equal(res.ok, false, `应当拒绝，实际通过：${JSON.stringify(res.value || res)}`)
   if (code) assert.ok(hasCode(res, code), `应含错误码 ${code}，实际：${errors(res).join(',')}`)
 }
@@ -84,19 +84,19 @@ test('validateTransition 拒绝缺身份字段与非法状态', () => {
 test('合法准备请求通过并归一化目标歌曲 id', () => {
   const res = c.validatePrepareRequest(c.SAMPLES.prepareRequest())
   assertAccepted(res)
-  assert.equal(res.value.targetTrackId, 900002)
+  assert.equal(res.value!.targetTrackId, 900002)
 })
 
 test('准备请求保留目标歌名与歌手：生成器靠它们搜索和写稿，不能在校验时丢掉', () => {
   const res = c.validatePrepareRequest({ ...c.SAMPLES.prepareRequest(), targetName: '晴天', targetArtists: '周杰伦' })
   assertAccepted(res)
-  assert.equal(res.value.targetName, '晴天')
-  assert.equal(res.value.targetArtists, '周杰伦')
+  assert.equal(res.value!.targetName, '晴天')
+  assert.equal(res.value!.targetArtists, '周杰伦')
   // 未提供时归一化为空串，调用方拿到的是稳定形状而不是 undefined
   const none = c.validatePrepareRequest(c.SAMPLES.prepareRequest())
   assertAccepted(none)
-  assert.equal(none.value.targetName, '')
-  assert.equal(none.value.targetArtists, '')
+  assert.equal(none.value!.targetName, '')
+  assert.equal(none.value!.targetArtists, '')
 })
 
 test('准备请求缺少会话/机会身份或目标等于来源时被拒绝', () => {
@@ -132,8 +132,8 @@ test('空稿、非法 storyStatus、非法 claim kind 被拒绝', () => {
   assertRejected(c.validateScript({ ...c.SAMPLES.sourcedScript(), scriptText: '   ' }), 'empty_script')
   assertRejected(c.validateScript({ ...c.SAMPLES.sourcedScript(), storyStatus: 'rumor' }), 'invalid_story_status')
   const badKind = c.SAMPLES.sourcedScript()
-  badKind.claims[0].kind = 'rumor'
-  assertRejected(c.validateScript(badKind), 'invalid_claim_kind')
+  const malformed = { ...badKind, claims: [{ ...badKind.claims[0], kind: 'rumor' }] }
+  assertRejected(c.validateScript(malformed), 'invalid_claim_kind')
 })
 
 test('跨目标文案被拒绝（机会身份不匹配）', () => {
@@ -355,14 +355,14 @@ test('全部有效样例通过对应校验器', () => {
 })
 
 test('全部失败样例以预期错误码被拒绝', () => {
-  const dispatch: Record<string, (value: unknown, opts?: unknown) => any> = {
-    script: (v: any, opts: any) => c.validateScript(v, opts),
-    prepare: (v: any) => c.validatePrepareRequest(v),
-    job: (v: any) => c.validateSegueJob(v),
-    sources: (v: any) => c.validateSources(v),
+  const dispatch: Record<string, (value: unknown) => import('@radio/contracts').ValidationResult<unknown>> = {
+    script: (v: unknown) => c.validateScript(v),
+    prepare: (v: unknown) => c.validatePrepareRequest(v),
+    job: (v: unknown) => c.validateSegueJob(v),
+    sources: (v: unknown) => c.validateSources(v),
   }
   for (const sample of c.SAMPLES.invalidSamples()) {
-    const res = dispatch[sample.kind](sample.value, sample.opts)
+    const res = dispatch[sample.kind](sample.value)
     assert.equal(
       res.ok,
       false,
@@ -373,4 +373,31 @@ test('全部失败样例以预期错误码被拒绝', () => {
       `失败样例 ${sample.name} 应含 ${sample.expectCode}，实际：${errors(res).join(',')}`,
     )
   }
+})
+
+test('校验成功的队列条目具有声明的实际类型，不透传数字字符串或缺失默认字段', () => {
+  const result = c.validateQueueItem({ itemId: 'typed', type: 'track', trackId: '123', durationMs: '2000' })
+  assert.equal(result.ok, true)
+  assert.ok(result.value?.type === 'track')
+  assert.equal(result.value.trackId, 123)
+  assert.equal(result.value.durationMs, 2000)
+  assert.equal(typeof result.value.name, 'string')
+  assert.equal(typeof result.value.auto, 'boolean')
+  assert.equal(typeof result.value.addedAt, 'number')
+})
+
+test('准备请求必须提供安全整数 epoch 和 transitionSeq，不接受缺字段或转换后的伪数字', () => {
+  for (const patch of [{ transitionSeq: undefined }, { transitionSeq: '1' }, { transitionSeq: -1 }, { epoch: null }, { epoch: true }, { epoch: Infinity }]) {
+    assert.equal(c.validatePrepareRequest({ ...c.SAMPLES.prepareRequest(), ...patch }).ok, false)
+  }
+})
+
+test('校验成功的机会和成品不泄漏错误的嵌套字段类型', () => {
+  assertRejected(c.validateTransition({ ...c.SAMPLES.transition(), closedReason: 42 }), 'invalid_closed_reason')
+  assertRejected(c.validateTransition({ ...c.SAMPLES.transition(), closedAt: '123' }), 'invalid_closed_at')
+  const script = c.validateScript({ ...c.SAMPLES.sourcedScript(), targetTrackId: '900002' })
+  assert.equal(script.ok, true)
+  assert.equal(typeof script.value?.targetTrackId, 'number')
+  const job = c.SAMPLES.readyJob()
+  assertRejected(c.validateSegueJob({ ...job, audio: { ...job.audio, bytes: '50000' } }), 'invalid_audio_bytes')
 })

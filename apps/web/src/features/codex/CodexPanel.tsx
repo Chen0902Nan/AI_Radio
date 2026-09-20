@@ -1,47 +1,31 @@
 // Codex 选歌面板（迁移自 index.html .codex 区块 + app.js requestPlan/renderCodexPicks）。
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRadio, useAppStore } from '../../app/radio-context'
-import { makeTrackItem } from '@radio/contracts'
-import { api } from '../../api/client'
 
 export function CodexPanel() {
-  const { playback, store, refill } = useRadio()
+  const { store, sources } = useRadio()
   const app = useAppStore()
   const [brief, setBrief] = useState('')
   const [planStatus, setPlanStatus] = useState('用本机 Codex 订阅，从歌单内与歌单外候选中挑一批歌，接在当前播放之后。')
   const [planCls, setPlanCls] = useState('')
   const [pending, setPending] = useState(false)
 
+  const lifetime = useRef<AbortController | null>(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    lifetime.current = controller
+    return () => controller.abort()
+  }, [])
+
   async function requestPlan() {
-    const epoch = refill.cancel('manual_plan', {reset: true})
     setPending(true)
     setPlanStatus('Codex 正在选歌…（可能要十几秒）')
-    try {
-      const data = await api.plan({ brief: brief.trim(), count: 5, epoch, sessionId: store.get().sessionId, excludeIds: playback.getSnapshot().currentTrackId ? [playback.getSnapshot().currentTrackId!] : [] })
-      if (refill.epoch !== epoch) {
-        setPlanStatus('播放安排已经改变，已忽略旧选歌结果。')
-        return
-      }
-      if (!data.ok) {
-        const err = new Error(String(data.message || `HTTP ${data.status}`))
-        ;(err as Error & { code?: string }).code = String(data.code || 'error')
-        throw err
-      }
-      const picks = data.picks as Array<{ id: number; name: string; artists: string; reason: string }>
-      // 把 Codex 选出的歌接到当前播放之后；不打断正在响的那首（旧 applyCodexQueue）
-      const items = picks.map((p) => makeTrackItem({...p, auto: true, fromCodex: true}))
-      playback.replaceUpcoming(items)
-      store.set({ codexPicks: picks.map((p) => ({ id: p.id, name: p.name, reason: p.reason })), sourceLabel: '混合电台 · 50% 探索', queueMode: 'radio', radioPrepared: true })
-      const secs = (data.meta as { durationMs?: number })?.durationMs ? ((data.meta as { durationMs: number }).durationMs / 1000).toFixed(1) : '?'
-      setPlanStatus(`${data.message ? String(data.message) + '。' : ''}Codex 选出 ${picks.length} 首，已接在当前播放之后（用时 ${secs}s）。点下面任意一首可直接播放。`)
-      setPlanCls('ok')
-    } catch (err) {
-      // 失败时什么都不改：原队列继续播，只是把原因说清楚
-      setPlanStatus(`Codex 选歌失败（${(err as Error & { code?: string }).code}）：${(err as Error).message}。继续使用原队列，播放不受影响。`)
-      setPlanCls('bad')
-    } finally {
-      setPending(false)
-    }
+    const signal = lifetime.current?.signal
+    const result = await sources.plan(brief, signal)
+    if (signal?.aborted) return
+    setPlanStatus(result.text)
+    setPlanCls(result.cls)
+    setPending(false)
   }
 
   return (
@@ -78,10 +62,7 @@ export function CodexPanel() {
           <div
             key={`${p.id}-${i}`}
             className="grid cursor-pointer grid-cols-[22px_1fr] items-baseline gap-2.5 rounded-[9px] border border-line px-2.5 py-2 hover:bg-panel-2"
-            onClick={() => {
-              const idx = playback.queue.findIndex((t) => t.trackId === p.id)
-              if (idx >= 0) { playback.queue[idx].auto = false; void playback.play(idx, { userGesture: true }) }
-            }}
+            onClick={() => void sources.playManual(p.id)}
           >
             <span className="text-right text-[11px] tabular-nums text-[#616879]">{i + 1}</span>
             <span className="min-w-0">

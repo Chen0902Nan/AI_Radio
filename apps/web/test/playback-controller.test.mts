@@ -8,27 +8,35 @@ import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { deferred } from './support/deferred.mts'
+import type { TrackItem } from '@radio/contracts'
+import type { ResolveResult, AudioPort } from '../dist-playback/playback/playback-types.js'
 
 // TS 源码经 tsc 编译后测试（web 的 build 脚本先跑 tsc）
 const require = createRequire(import.meta.url)
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 // 直接用 tsx 不可用时：本测试经 npm run build:playback 产出的 CJS 副本验证
-const { PlaybackController } = require(path.join(root, 'apps/web/dist-playback/playback-controller.cjs'))
+const { PlaybackController }: typeof import('../dist-playback/playback/playback-controller.js') = require(path.join(root, 'apps/web/dist-playback/playback-controller.cjs'))
 
 /** 假 audio：记录事件监听器，可控属性。 */
-function fakeAudio() {
-  const listeners = new Map()
+interface FakeAudio extends AudioPort {
+  listeners: Map<string, Set<() => void>>
+  emit: (type: string) => void
+  pausedCalls: number
+}
+function fakeAudio(): FakeAudio {
+  const listeners = new Map<string, Set<() => void>>()
   return {
     listeners,
-    addEventListener(type: any, fn: any) {
+    addEventListener(type: string, fn: () => void) {
       if (!listeners.has(type)) listeners.set(type, new Set())
-      listeners.get(type).add(fn)
+      listeners.get(type)!.add(fn)
     },
-    removeEventListener(type: any, fn: any) {
+    removeEventListener(type: string, fn: () => void) {
       listeners.get(type)?.delete(fn)
     },
-    emit(type: string, ev = {}) {
-      for (const fn of listeners.get(type) || []) fn(ev)
+    emit(type: string) {
+      for (const fn of listeners.get(type) || []) fn()
     },
     preload: '',
     paused: true,
@@ -55,26 +63,26 @@ function fakeAudio() {
   }
 }
 
-const TRACK_A = { itemId: 'itn_a', type: 'track', trackId: 101, name: '曲A', artists: '歌手', album: '', durationMs: 200000, auto: false, fromCodex: false, addedAt: 1 }
-const TRACK_B = { itemId: 'itn_b', type: 'track', trackId: 102, name: '曲B', artists: '歌手', album: '', durationMs: 200000, auto: false, fromCodex: false, addedAt: 2 }
+const TRACK_A: TrackItem = { itemId: 'itn_a', type: 'track', trackId: 101, name: '曲A', artists: '歌手', album: '', durationMs: 200000, auto: false, fromCodex: false, addedAt: 1 }
+const TRACK_B: TrackItem = { itemId: 'itn_b', type: 'track', trackId: 102, name: '曲B', artists: '歌手', album: '', durationMs: 200000, auto: false, fromCodex: false, addedAt: 2 }
 
 function setup(queue = [TRACK_A, TRACK_B]) {
   const audio = fakeAudio()
-  const events: any[][] = []
+  const events: Array<[string, ...unknown[]]> = []
   const ctl = new PlaybackController({
     audio,
     events: {
-      onFirstPlaying: (item: { trackId: any }) => events.push(['first-playing', item?.trackId]),
-      onNaturalEnded: (item: { trackId: any }) => events.push(['natural-ended', item?.trackId]),
-      onTrackFailed: (item: { trackId: any }, reason: any) => events.push(['failed', item?.trackId, reason]),
+      onFirstPlaying: (item) => events.push(['first-playing', item?.trackId]),
+      onNaturalEnded: (item) => events.push(['natural-ended', item?.trackId]),
+      onTrackFailed: (item, reason) => events.push(['failed', item?.trackId, reason]),
       onSeguePlaying: () => events.push(['segue-playing']),
       onSegueEnded: () => events.push(['segue-ended']),
-      onSegueFailed: (id: any, started: any) => events.push(['segue-failed', id, started]),
-      onPreviewFailed: (m: any) => events.push(['preview-failed', m]),
+      onSegueFailed: (id, started) => events.push(['segue-failed', id, started]),
+      onPreviewFailed: (m) => events.push(['preview-failed', m]),
     },
   })
   ctl.replaceQueue(queue)
-  ctl.resolveTrack = async (id: any, force: any) => ({
+  ctl.resolveTrack = async (id, force) => ({
     ok: true, playable: true, audioUrl: `/api/audio/${id}${force ? '?force=1' : ''}`,
   })
   return { ctl, audio, events }
@@ -109,7 +117,7 @@ test('切歌解析期间旧媒体的 ended/error 不算到新条目头上', asyn
 
 test('加载中暂停：迟到的解析结果不把播放重新拉起来', async () => {
   const { ctl, audio } = setup()
-  let resolveFetch
+  let resolveFetch!: (value: ResolveResult) => void
   ctl.resolveTrack = () => new Promise((r) => (resolveFetch = r))
   const p = ctl.play(0)
   assert.equal(ctl.getSnapshot().resolving, true)
@@ -205,4 +213,61 @@ test('订阅/退订：React useSyncExternalStore 协议', async () => {
   const before = calls
   ctl.pause()
   assert.equal(calls, before)
+})
+
+for (const nextIntent of ['switch', 'stop', 'pause'] as const) {
+  test(`恢复 A 后${nextIntent}，A 的迟到拒绝不产生失败或干扰新意图`, async () => {
+    const { ctl, audio, events } = setup()
+    await ctl.play(0)
+    audio.currentSrc = audio.src
+    audio.currentTime = 10
+    audio.emit('playing')
+    ctl.pause()
+    const pending = deferred<void>()
+    audio.play = () => pending.promise
+    const resumed = ctl.resume()
+    audio.play = () => { audio.paused = false; return Promise.resolve() }
+    if (nextIntent === 'switch') await ctl.play(1)
+    else ctl[nextIntent]()
+    pending.reject(new Error('old resume failed'))
+    await resumed
+    assert.deepEqual(events.filter(e => e[0] === 'failed'), [])
+    assert.equal(ctl.getSnapshot().currentTrackId, nextIntent === 'switch' ? 102 : 101)
+    assert.equal(audio.paused, nextIntent !== 'switch')
+    ctl.dispose()
+  })
+}
+
+test('当前恢复被浏览器拒绝仍提示原歌曲，正常恢复不重复记账', async () => {
+  const { ctl, audio, events } = setup()
+  await ctl.play(0)
+  audio.currentSrc = audio.src
+  audio.currentTime = 10
+  audio.emit('playing')
+  ctl.pause()
+  await ctl.resume()
+  audio.emit('playing')
+  assert.equal(events.filter(e => e[0] === 'first-playing').length, 1)
+  ctl.pause()
+  audio.play = async () => { throw new Error('blocked') }
+  await ctl.resume()
+  assert.deepEqual(events.filter(e => e[0] === 'failed'), [['failed', 101, '浏览器拒绝播放：blocked']])
+  ctl.dispose()
+})
+
+test('停止试听作废迟到的 play，且歌曲播放期间取消试听不打断歌曲', async () => {
+  const { ctl, audio } = setup()
+  const pending = deferred<void>()
+  audio.play = () => { audio.paused = false; return pending.promise }
+  const preview = ctl.startPreview('/api/dj/audio/preview')
+  ctl.cancelPreview()
+  pending.resolve()
+  assert.equal(await preview, false)
+  assert.equal(audio.paused, true)
+  audio.play = () => { audio.paused = false; return Promise.resolve() }
+  await ctl.play(0)
+  ctl.cancelPreview()
+  assert.equal(audio.paused, false)
+  assert.equal(ctl.getSnapshot().currentTrackId, 101)
+  ctl.dispose()
 })

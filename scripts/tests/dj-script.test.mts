@@ -4,9 +4,15 @@ import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
 // 迁移后测试目标：apps/api/src/dj 的 TS 实现（原 server/dj-script.js）
-const dj = require('../../apps/api/dist/dj/dj-script.service.js')
-const contract = require('@radio/contracts')
-const codex = require('../../apps/api/dist/codex/codex.service.js')
+const dj: typeof import('../../apps/api/dist/dj/dj-script.service.js') = require('../../apps/api/dist/dj/dj-script.service.js')
+const contract: typeof import('../../packages/contracts/dist/cjs/index.js') = require('@radio/contracts')
+const codex: typeof import('../../apps/api/dist/codex/codex.service.js') = require('../../apps/api/dist/codex/codex.service.js')
+
+function asRecord(value: unknown): Record<string, unknown> {
+  assert.ok(value && typeof value === 'object' && !Array.isArray(value))
+  return value as Record<string, unknown>
+}
+function asList(value: unknown): unknown[] { assert.ok(Array.isArray(value)); return value }
 
 /* ---------- 提示词 ---------- */
 
@@ -67,14 +73,14 @@ const INPUT = {
   brief: '深夜，安静一点',
 }
 
-function fakeExec(finalJson: { storyStatus: any; scriptText: any; claims: any; sources: any }|null, opts: { nonzero?: boolean; stderr?: string; timedOut?: boolean; stdout?: string } = {}) {
+function fakeExec(finalJson: Record<string, unknown> | null, opts: { nonzero?: boolean; stderr?: string; timedOut?: boolean; stdout?: string } = {}) {
   let calls = 0
   return {
     calls: () => calls,
     execFinal: async () => {
       calls += 1
       if (opts.nonzero) return { code: 1, stdout: '', stderr: opts.stderr || 'boom', timedOut: false, finalJson: null }
-      if (opts.timedOut) return { code: null, stdout: '', stderr: '', timedOut: true, finalJson: null }
+      if (opts.timedOut) return { code: -1, stdout: '', stderr: '', timedOut: true, finalJson: null }
       return { code: 0, stdout: opts.stdout || '', stderr: '', timedOut: false, finalJson }
     },
   }
@@ -83,13 +89,13 @@ function fakeExec(finalJson: { storyStatus: any; scriptText: any; claims: any; s
 test('成功：成品携带机会身份，通过契约校验，附搜索活动摘要，且只调用一次模型', async () => {
   const fake = fakeExec(MODEL_SOURCED(), { stdout: JSON.stringify({ type: 'item.completed', item: { type: 'web_search', query: 'q' } }) })
   const res = await dj.generateSegueScript(INPUT, fake)
-  assert.equal(res.ok, true, res.message)
-  assert.equal(res.script.targetTrackId, 900002)
-  assert.equal(res.script.targetItemId, 'itn_demo_2')
-  assert.equal(res.script.transitionId, 'tr_demo_1')
+  assert.equal(res.ok, true, JSON.stringify(res))
+  assert.equal(asRecord(res.script).targetTrackId, 900002)
+  assert.equal(asRecord(res.script).targetItemId, 'itn_demo_2')
+  assert.equal(asRecord(res.script).transitionId, 'tr_demo_1')
   const v = contract.validateScript(res.script, { targetTrackId: 900002, targetItemId: 'itn_demo_2', transitionId: 'tr_demo_1' })
   assert.equal(v.ok, true, JSON.stringify(v.errors))
-  assert.equal(res.meta.searchActivity.searchEvents, 1)
+  assert.equal(asRecord(asRecord(res.meta).searchActivity).searchEvents, 1)
   assert.equal(fake.calls(), 1, '失败/成功都只调用一次模型，不做无限修稿循环')
 })
 
@@ -97,9 +103,9 @@ test('查无资料：basic_only 照常返回，不编造出处', async () => {
   const fake = fakeExec(MODEL_BASIC())
   const res = await dj.generateSegueScript(INPUT, fake)
   assert.equal(res.ok, true)
-  assert.equal(res.script.storyStatus, 'basic_only')
-  assert.deepEqual(res.script.claims, [])
-  assert.deepEqual(res.script.sources, [])
+  assert.equal(asRecord(res.script).storyStatus, 'basic_only')
+  assert.deepEqual(asRecord(res.script).claims, [])
+  assert.deepEqual(asRecord(res.script).sources, [])
 })
 
 test('模型超时/退出码失败/输出非 JSON 都返回可处理失败', async () => {
@@ -121,13 +127,13 @@ test('空稿、目标缺失、归因缺失的模型输出被结构校验拒绝',
   empty.scriptText = '   '
   const r1 = await dj.generateSegueScript(INPUT, fakeExec(empty))
   assert.equal(r1.ok, false)
-  assert.ok(r1.errors.some((e: { code: string }) => e.code === 'empty_script'))
+  assert.ok(asList(r1.errors).some(e => asRecord(e).code === 'empty_script'))
 
   const noAttr = MODEL_SOURCED()
   noAttr.claims[0].spokenAttribution = ''
   const r2 = await dj.generateSegueScript(INPUT, fakeExec(noAttr))
   assert.equal(r2.ok, false)
-  assert.ok(r2.errors.some((e: { code: string }) => e.code === 'missing_spoken_attribution'))
+  assert.ok(asList(r2.errors).some(e => asRecord(e).code === 'missing_spoken_attribution'))
 })
 
 test('输入不合法（缺歌名/身份）时直接拒绝，不发起模型调用', async () => {
@@ -155,12 +161,12 @@ test('注入模式：success/basic_only/timeout/quota/invalid 覆盖主要路径
     dj.setDjScriptMode('success')
     const a = await dj.generateSegueScript(INPUT)
     assert.equal(a.ok, true)
-    assert.equal(a.meta.injected, true)
+    assert.equal(asRecord(a.meta).injected, true)
 
     dj.setDjScriptMode('basic_only')
     const b = await dj.generateSegueScript(INPUT)
     assert.equal(b.ok, true)
-    assert.equal(b.script.storyStatus, 'basic_only')
+    assert.equal(asRecord(b.script).storyStatus, 'basic_only')
 
     dj.setDjScriptMode('timeout')
     const t = await dj.generateSegueScript(INPUT)
@@ -186,7 +192,7 @@ test('注入模式：success/basic_only/timeout/quota/invalid 覆盖主要路径
 /* ---------- 旧选歌行为不回归 ---------- */
 
 test('codex.js 既有选歌校验保持原行为（fabricated id 拒绝、真实候选保留）', () => {
-  const candidates = [{ id: 1, name: 'A', reason: '' }, { id: 2, name: 'B', reason: '' }]
+  const candidates = [{ id: 1, name: 'A', artists: '', album: '', reason: '' }, { id: 2, name: 'B', artists: '', album: '', reason: '' }]
   const raw = { picks: [{ id: 1, reason: 'r1' }, { id: 999, reason: '编造' }, { id: 1, reason: '重复' }] }
   const v = codex.validatePicks(raw, candidates)
   assert.equal(v.valid.length, 1)
@@ -194,4 +200,27 @@ test('codex.js 既有选歌校验保持原行为（fabricated id 拒绝、真实
   assert.equal(v.rejected.length, 2)
   const empty = codex.validatePicks({ picks: [] }, candidates)
   assert.equal(empty.valid.length, 0)
+})
+
+test('Codex 选歌入口保留空候选、合法子集、超时和额度分类', async () => {
+  const previous = process.env.RADIO_TEST_HOOKS
+  process.env.RADIO_TEST_HOOKS = '1'
+  const service = new codex.CodexService()
+  const candidates = [{ id: 1, name: 'A', artists: 'Artist', album: 'Album' }, { id: 2, name: 'B', artists: 'Artist', album: 'Album' }]
+  try {
+    assert.equal((await service.pickTracks()).code, 'no_candidates')
+    for (const [mode, expected] of [['timeout', 'timeout'], ['quota', 'quota'], ['invalid', 'invalid_output']] as const) {
+      codex.setCodexMode(mode)
+      assert.equal((await service.pickTracks({ candidates })).code, expected)
+    }
+    codex.setCodexMode('partial')
+    const result = await service.pickTracks({ candidates, count: 1 })
+    assert.equal(result.ok, true)
+    assert.deepEqual(result.picks?.map(item => item.id), [1])
+    assert.equal(result.rejected?.length, 2)
+  } finally {
+    codex.setCodexMode('off')
+    if (previous === undefined) delete process.env.RADIO_TEST_HOOKS
+    else process.env.RADIO_TEST_HOOKS = previous
+  }
 })

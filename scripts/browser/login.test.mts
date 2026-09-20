@@ -43,3 +43,41 @@ test('登录：空 502 显示连接错误，恢复后用户可重试获取二维
   assert.match(await page.$eval('main', el => el.textContent), /请用网易云音乐 App 扫码/)
   assert.deepEqual(errors, [])
 })
+
+test('登录：刷新作废旧二维码与旧轮询成功，页面只显示新一轮', { timeout: 20000 }, async t => {
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'radio-login-race-'))
+  const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true, userDataDir: profile })
+  t.after(async () => { await browser.close(); moveToTrash(profile) })
+  const page = await browser.newPage()
+  const requests: import('puppeteer-core').HTTPRequest[] = []
+  let oldPoll: import('puppeteer-core').HTTPRequest | null = null
+  const qr = (key: string) => JSON.stringify({ key, qrimg: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg"><text>${key}</text></svg>`) })
+  await page.setRequestInterception(true)
+  page.on('request', request => {
+    const url = new URL(request.url())
+    if (url.pathname === '/api/login/qr') { requests.push(request); return }
+    if (url.pathname === '/api/login/poll') { oldPoll = request; return }
+    if (request.url().startsWith('data:')) { void request.continue(); return }
+    const file = path.resolve('apps/web/dist', url.pathname.startsWith('/assets/') ? url.pathname.slice(1) : 'index.html')
+    void request.respond({ status: 200, contentType: url.pathname.endsWith('.js') ? 'text/javascript' : url.pathname.endsWith('.css') ? 'text/css' : 'text/html', body: fs.readFileSync(file) })
+  })
+  await page.goto('http://radio.test/login', { waitUntil: 'domcontentloaded' })
+  await page.waitForFunction(() => document.querySelector('button'))
+  while (!requests.length) await new Promise(resolve => setTimeout(resolve, 10))
+  await page.locator('button').click()
+  while (requests.length < 2) await new Promise(resolve => setTimeout(resolve, 10))
+  await requests[1].respond({ status: 200, contentType: 'application/json', body: qr('current') })
+  await page.waitForFunction(() => document.querySelector('img')?.src.includes('current'))
+  await requests[0].respond({ status: 200, contentType: 'application/json', body: qr('obsolete') }).catch(() => {})
+  while (!oldPoll) await new Promise(resolve => setTimeout(resolve, 20))
+  const stalePoll = oldPoll as import('puppeteer-core').HTTPRequest
+  await page.locator('button').click()
+  while (requests.length < 3) await new Promise(resolve => setTimeout(resolve, 10))
+  await requests[2].respond({ status: 200, contentType: 'application/json', body: qr('latest') })
+  await stalePoll.respond({ status: 200, contentType: 'application/json', body: '{"code":803,"account":{"nickname":"obsolete"}}' }).catch(() => {})
+  await page.waitForFunction(() => document.querySelector('img')?.src.includes('latest'))
+  await new Promise(resolve => setTimeout(resolve, 3200))
+  assert.equal(new URL(page.url()).pathname, '/login')
+  assert.ok((await page.$eval('img', img => img.src)).includes('latest'))
+  assert.doesNotMatch(await page.$eval('main', el => el.textContent), /登录成功/)
+})

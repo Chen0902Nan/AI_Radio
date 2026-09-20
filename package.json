@@ -13,7 +13,7 @@
   },
   "scripts": {
     "dev": "node scripts/dev.mts",
-    "test": "npm run build && node --test --test-force-exit scripts/tests/*.test.mts scripts/tests/*.test.cts apps/web/test/*.test.mts apps/web/test/*.test.cts",
+    "test": "npm run check:quality:delta && npm run build && node --test --test-force-exit scripts/tests/*.test.mts scripts/tests/*.test.cts apps/web/test/*.test.mts apps/web/test/*.test.cts",
     "start": "node --env-file-if-exists=.env --use-env-proxy apps/api/dist/main.js",
     "start:test": "RADIO_TEST_HOOKS=1 node --env-file-if-exists=.env --use-env-proxy apps/api/dist/main.js",
     "build": "npm run build -w @radio/contracts && npm run build -w @radio/web && npm run build -w @radio/api",
@@ -26,7 +26,10 @@
     "verify:orchestration": "node scripts/verify-orchestration.mts",
     "verify:dj-smoke": "node scripts/verify-dj-smoke.mts",
     "test:browser": "npm run build && node --test --test-force-exit --test-timeout=90000 scripts/browser/*.test.mts",
-    "typecheck:tools": "tsc -p tsconfig.tools.json"
+    "typecheck:tools": "npm run build:types && tsc -p tsconfig.tools.json",
+    "build:types": "npm run build -w @radio/contracts && tsc -p apps/api/tsconfig.json --emitDeclarationOnly && tsc -p apps/web/tsconfig.playback.json --emitDeclarationOnly && node scripts/finalize-playback-build.mts --types-only",
+    "check:quality": "node scripts/check-quality.mts",
+    "check:quality:delta": "node scripts/check-quality.mts --check"
   },
   "repository": {
     "type": "git",
