@@ -1,5 +1,7 @@
 # 技术栈迁移：React + TypeScript + Vite / NestJS / SQLite，队列归属不变
 
+> 2026-09-20：技术栈与浏览器播放归属继续有效；未来实时通道改为图示 WebSocket，每日准备目标改为 07:00/09:00 等节律，见 [ADR-0007](./0007-claudio-target-architecture.md)。本文保留已实施迁移的历史事实。
+
 日期：2026-09-17。状态：已接受并执行完毕。M0→M5 已收口，旧 `server/` + `public/` 已按废纸篓规则退役，生产实现只剩 `apps/web` + `apps/api` + `packages/contracts` 一套；审查发现的行为回归已修复，修复后的真实 Codex/Fish 已现场确认（见补记缺口 3）。**唯一尚未执行的迁移验收是「修复后的连续两小时复验」**；迁移范围外的待办（探索选歌真实长时收听、DJ 机会路径复验、天气/日历/聊天/每日准备）集中在 M5 报告文末「剩余待验收」。证据见 [M5 验证报告](../migration/m5-verification.md) 和 [修复报告](../../.scratch/stack-migration-audit/fix-results.md)。
 
 ## 背景

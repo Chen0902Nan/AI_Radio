@@ -49,6 +49,8 @@ data/               SQLite、网易云登录态、DJ 音频缓存（不入 Git�
 
 ## 文档
 
+- [Claudio 最终架构与开发路线图](docs/plans/2026-09-20-claudio-roadmap.md) — 按用户指定施工图逐项规划未来功能、迁移、阶段依赖及验收；这是目标，不代表当前均已实现。
+- [最终目标架构决策](docs/adr/0007-claudio-target-architecture.md) — Claude Code、WebSocket、07:00/09:00 节律、PWA、音响与现有架构的关系。
 - [CONTEXT.md](CONTEXT.md) — 领域词汇表，术语以此为准。
 - [docs/adr/](docs/adr/) — 架构决定（队列归属、技术栈迁移、音乐接入、探索选歌、工具链 TypeScript）。
 - [docs/migration/route-contract.md](docs/migration/route-contract.md) — HTTP 路由合同。
